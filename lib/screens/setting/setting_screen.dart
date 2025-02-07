@@ -1,4 +1,5 @@
 import 'package:carkett/generated/l10n.dart';
+import 'package:carkett/providers/appconfig_controller.dart';
 import 'package:carkett/providers/theme_controller.dart';
 import 'package:carkett/services/auth_firebase_service.dart';
 import 'package:carkett/widgets/custom_show_modal_bottom_sheet.dart';
@@ -78,8 +79,6 @@ class SettingScreen extends StatelessWidget {
                         } else {
                           setTheme.setTheme(ThemeMode.light);
                         }
-
-                        Navigator.of(context, rootNavigator: true).pop();
                       },
                       textController: textController,
                       textInput: getTextTheme,
@@ -118,7 +117,36 @@ class SettingScreen extends StatelessWidget {
                         ),
                         const Divider(),
                         const SizedBox(height: 30),
-                      ]);
+                        const SizedBox(height: 30),
+                      ],
+                      key: "Theme",
+                      defaultValue: "dark");
+                },
+              ),
+              ListTile(
+                title: const Text('Moneda'),
+                onTap: () async {
+                  await customShowModalBottomSheetDropdown(
+                    context: context,
+                    metho: (value) {
+                      print("Moneda seleccionada: $value");
+                      Provider.of<AppConfigController>(context, listen: false)
+                          .loadCurrency();
+                    },
+                    textController: TextEditingController(),
+                    textInput: "Elige la moneda",
+                    itemsDropdown: [
+                      const DropdownMenuItem(
+                          value: 'USD', child: Text("Dólares (USD)")),
+                      const DropdownMenuItem(
+                          value: 'EUR', child: Text("Euros (EUR)")),
+                      const DropdownMenuItem(
+                          value: 'HNL', child: Text("Lempiras (HNL)")),
+                    ],
+                    items: [],
+                    defaultValue: 'USD',
+                    key: "currency",
+                  );
                 },
               ),
               const Divider(),

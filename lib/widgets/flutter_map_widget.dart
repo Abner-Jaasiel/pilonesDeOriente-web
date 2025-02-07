@@ -4,7 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
-class FlutterMapWidget extends StatelessWidget {
+class FlutterMapWidget extends StatefulWidget {
   final double lat;
   final double long;
 
@@ -15,17 +15,33 @@ class FlutterMapWidget extends StatelessWidget {
   });
 
   @override
+  State<FlutterMapWidget> createState() => _FlutterMapWidgetState();
+}
+
+class _FlutterMapWidgetState extends State<FlutterMapWidget> {
+  late final MapController _mapController;
+
+  @override
+  void initState() {
+    super.initState();
+    _mapController = MapController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _mapController.move(LatLng(widget.lat, widget.long), 13);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     ThemeController themeController = Provider.of<ThemeController>(context);
-
-    LatLng initialPosition = LatLng(lat, long);
+    LatLng initialPosition = LatLng(widget.lat, widget.long);
 
     return FlutterMap(
+      mapController: _mapController,
       options: MapOptions(
         initialCenter: initialPosition,
         initialZoom: 13,
         interactionOptions: const InteractionOptions(
-          flags: InteractiveFlag.none,
+          flags: InteractiveFlag.all, // Permitir interacción si es necesario
         ),
         backgroundColor: Colors.black,
       ),

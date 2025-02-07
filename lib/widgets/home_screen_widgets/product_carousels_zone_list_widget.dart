@@ -9,86 +9,7 @@ import 'package:provider/provider.dart';
 
 final bucketGlobal = PageStorageBucket();
 
-/*
-class ProductCarouselsZoneListWidget extends StatelessWidget {
-  const ProductCarouselsZoneListWidget({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    APIService apiService = APIService();
-    Future<List<dynamic>> data = apiService.fetchCarouselProducts();
-
-    return FutureBuilder(
-      future: data,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        } else if (snapshot.hasData) {
-          final Map<int, Map<String, List<dynamic>>> productsByCategory = {};
-
-          for (var productData in snapshot.data!) {
-            ProductCarruselModel product =
-                ProductCarruselModel.fromJson(productData);
-
-            if (product.categoryId != null && product.categoryName != null) {
-              final int? categoryKey =
-                  product.parentCategoryId ?? product.categoryId;
-              final categoryName = product.parentCategoryId != null
-                  ? ' ${product.categoryName}'
-                  : product.categoryName;
-              if (categoryKey != null && categoryName != null) {
-                productsByCategory.putIfAbsent(
-                  categoryKey,
-                  () => {
-                    categoryName: [],
-                  },
-                );
-              }
-
-              productsByCategory[categoryKey]![categoryName]!.add(product);
-            }
-          }
-
-          List<Widget> carouselWidgets = [];
-          productsByCategory.forEach((categoryId, categoryData) {
-            categoryData.forEach((categoryName, products) {
-              if (carouselWidgets.length < 6) {
-                var limitedProducts = products.take(5).toList();
-
-                carouselWidgets.add(
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(
-                            top: 15.0, bottom: 8, left: 15),
-                        child: Text(
-                          categoryName,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                      ),
-                      SizedBox(
-                        height: 340,
-                        child: ProductCarouselListWidget(data: limitedProducts),
-                      ),
-                    ],
-                  ),
-                );
-              }
-            });
-          });
-
-          return Column(children: carouselWidgets);
-        } else {
-          return const Center(child: Text('No data available.'));
-        }
-      },
-    );
-  }
-}*/
-class ProductCarouselsZoneListWidget extends StatelessWidget {
+/*class ProductCarouselsZoneListWidget extends StatelessWidget {
   const ProductCarouselsZoneListWidget({super.key});
 
   @override
@@ -164,6 +85,100 @@ class ProductCarouselsZoneListWidget extends StatelessWidget {
         }
       },
     );
+  }
+}*/
+
+class ProductCarouselsZoneListWidget extends StatefulWidget {
+  const ProductCarouselsZoneListWidget({super.key});
+
+  @override
+  _ProductCarouselsZoneListWidgetState createState() =>
+      _ProductCarouselsZoneListWidgetState();
+}
+
+class _ProductCarouselsZoneListWidgetState
+    extends State<ProductCarouselsZoneListWidget> {
+  late List<dynamic> _productsData; // Almacenará los datos cargados
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final APIService apiService = APIService();
+
+    try {
+      final List<dynamic> data = await apiService.fetchCarouselProducts();
+
+      setState(() {
+        _productsData = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading data: $e');
+
+      _isLoading = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final Map<int, Map<String, List<dynamic>>> productsByCategory = {};
+
+    for (var productData in _productsData) {
+      ProductCarruselModel product = ProductCarruselModel.fromJson(productData);
+
+      if (product.categoryId != null && product.categoryName != null) {
+        final int? categoryKey = product.parentCategoryId ?? product.categoryId;
+        final categoryName = product.parentCategoryId != null
+            ? ' ${product.categoryName}'
+            : product.categoryName;
+
+        if (categoryKey != null && categoryName != null) {
+          productsByCategory.putIfAbsent(categoryKey, () => {categoryName: []});
+        }
+
+        productsByCategory[categoryKey]![categoryName]!.add(product);
+      }
+    }
+
+    List<Widget> carouselWidgets = [];
+    productsByCategory.forEach((categoryId, categoryData) {
+      categoryData.forEach((categoryName, products) {
+        if (carouselWidgets.length < 6) {
+          var limitedProducts = products.take(5).toList();
+
+          carouselWidgets.add(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding:
+                      const EdgeInsets.only(top: 15.0, bottom: 8, left: 15),
+                  child: Text(
+                    categoryName,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                SizedBox(
+                  height: 340,
+                  child: ProductCarouselListWidget(data: limitedProducts),
+                ),
+              ],
+            ),
+          );
+        }
+      });
+    });
+
+    return Column(children: carouselWidgets);
   }
 }
 
@@ -352,7 +367,6 @@ class ProductCarouselListWidget extends StatelessWidget {
               categoryName: product.categoryName ?? 'Category',
               productName: product.name,
               price: product.price,
-              currency: '\$',
               onTap: () {
                 //  routeManager.navigateTo(context, '/product/${product.id}');
 

@@ -9,12 +9,14 @@ class MessageContainerWidget extends StatefulWidget {
     this.maxWidth = 320,
     this.rewrite = true,
     this.onChange,
+    this.margin = 20,
   });
 
   final String message;
   final TextButton? textButton;
   final double maxWidth;
   final bool rewrite;
+  final double margin;
   final Function(bool)? onChange;
 
   @override
@@ -61,7 +63,7 @@ class _MessageContainerWidgetState extends State<MessageContainerWidget> {
       constraints: BoxConstraints(maxWidth: widget.maxWidth),
       child: Container(
         padding: const EdgeInsets.all(8),
-        margin: const EdgeInsets.all(20),
+        margin: EdgeInsets.all(widget.margin),
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor.withOpacity(0.9),
           borderRadius: const BorderRadius.only(

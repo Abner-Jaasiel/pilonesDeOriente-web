@@ -52,11 +52,14 @@ class RegisterDataController with ChangeNotifier {
     notifyListeners();
   }
 
-  // Puedes agregar la lógica de validación aquí, por ejemplo, para validar que las contraseñas coincidan:
   bool get isPasswordMatching => _password == _confirmPassword;
   bool get delAccount => _delAccount;
   set delAccount(bool value) {
     _delAccount = value;
+    notifyListeners();
+  }
+
+  void refresh() {
     notifyListeners();
   }
 }

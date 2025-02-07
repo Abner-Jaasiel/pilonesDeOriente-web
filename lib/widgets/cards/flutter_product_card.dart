@@ -1,6 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:carkett/providers/appconfig_controller.dart';
+import 'package:carkett/utils/utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProductCard extends StatefulWidget {
   final String? id;
@@ -9,7 +13,6 @@ class ProductCard extends StatefulWidget {
   final String categoryName;
   final String productName;
   final double price;
-  final String currency;
   final VoidCallback? onTap;
   final VoidCallback? onFavoritePressed;
   final bool? isAvailable;
@@ -23,7 +26,6 @@ class ProductCard extends StatefulWidget {
     required this.categoryName,
     required this.productName,
     required this.price,
-    this.currency = '\$',
     this.onTap,
     this.onFavoritePressed,
     this.shortDescription = '',
@@ -40,6 +42,14 @@ class ProductCard extends StatefulWidget {
 
 class ProductCardState extends State<ProductCard> {
   bool _isAdded = false;
+  String _currency = '\$';
+
+  @override
+  void initState() {
+    super.initState();
+    _currency =
+        Provider.of<AppConfigController>(context, listen: false).currency;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -76,12 +86,11 @@ class ProductCardState extends State<ProductCard> {
                     fit: BoxFit.contain,
                     height: 170,
                     width: double.infinity,
-                    placeholder: (context, url) =>
-                        Container(), // Esto elimina el efecto de carga
+                    placeholder: (context, url) => Container(),
                     errorWidget: (context, url, error) => Icon(
                       Icons.error,
                       color: textColor,
-                    ), // O cambiar a cualquier ícono que prefieras en caso de error
+                    ),
                   ),
                 ),
                 Positioned(
@@ -128,77 +137,10 @@ class ProductCardState extends State<ProductCard> {
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
-                  if (widget.shortDescription!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6.0),
-                      child: Text(
-                        widget.shortDescription!,
-                        maxLines: 2,
-                        style: TextStyle(
-                          color: textColor.withOpacity(0.7),
-                          fontSize: 14,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                  if (widget.rating != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Row(
-                        children: List.generate(
-                          5,
-                          (index) => Icon(
-                            index < widget.rating!.round()
-                                ? Icons.star
-                                : Icons.star_border,
-                            color: Colors.orange,
-                            size: 16,
-                          ),
-                        ),
-                      ),
-                    ),
                   const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      if (widget.isAvailable!)
-                        const Row(
-                          children: [
-                            Icon(
-                              Icons.check_circle,
-                              color: Colors.green,
-                              size: 18,
-                            ),
-                            SizedBox(width: 4),
-                            Text(
-                              'Available',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green,
-                              ),
-                            ),
-                          ],
-                        ),
-                      if (!widget.isAvailable!)
-                        const Row(
-                          children: [
-                            Icon(
-                              Icons.do_disturb_alt_rounded,
-                              color: Colors.red,
-                              size: 18,
-                            ),
-                            SizedBox(width: 4),
-                            Text(
-                              'Unavailable',
-                              style: TextStyle(
-                                color: Colors.red,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
                       Flexible(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
@@ -213,7 +155,7 @@ class ProductCardState extends State<ProductCard> {
                                 ),
                               ),
                             Text(
-                              '${widget.currency}${widget.price.toStringAsFixed(0)}',
+                              getFormattedCurrency(widget.price, context),
                               style: TextStyle(
                                 color: textColor,
                                 fontWeight: FontWeight.bold,

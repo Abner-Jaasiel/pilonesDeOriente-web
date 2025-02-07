@@ -972,6 +972,177 @@ class S {
       args: [],
     );
   }
+
+  String get loginTitle {
+    return Intl.message(
+      "Welcome to Our App",
+      name: 'loginTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  String get loginSubtitle {
+    return Intl.message(
+      "Log in to continue",
+      name: 'loginSubtitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  String get identityCardId {
+    return Intl.message(
+      "Identity Card ID",
+      name: 'identityCardId',
+      desc: '',
+      args: [],
+    );
+  }
+
+  String get dontHaveAccount {
+    return Intl.message(
+      "Don't have an account?",
+      name: 'dontHaveAccount',
+      desc: '',
+      args: [],
+    );
+  }
+
+  String get selectSellerType {
+    return Intl.message(
+      "Select Seller Type",
+      name: 'selectSellerType',
+      desc: '',
+      args: [],
+    );
+  }
+
+  String get generalSeller {
+    return Intl.message(
+      "General Seller",
+      name: 'generalSeller',
+      desc: '',
+      args: [],
+    );
+  }
+
+  String get premiumSeller {
+    return Intl.message(
+      "Premium Seller",
+      name: 'premiumSeller',
+      desc: '',
+      args: [],
+    );
+  }
+
+  String get enterpriseSeller {
+    return Intl.message(
+      "Enterprise Seller",
+      name: 'enterpriseSeller',
+      desc: '',
+      args: [],
+    );
+  }
+
+  String get generalSellerDesc {
+    return Intl.message(
+      "Start selling with basic features.",
+      name: 'generalSellerDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
+  String get premiumSellerDesc {
+    return Intl.message(
+      "Get more visibility and exclusive tools.",
+      name: 'premiumSellerDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
+  String get enterpriseSellerDesc {
+    return Intl.message(
+      "For large businesses and advanced needs.",
+      name: 'enterpriseSellerDesc',
+      desc: '',
+      args: [],
+    );
+  }
+
+  String get generalSellerDescription {
+    return Intl.message(
+      "Start selling with basic features.",
+      name: 'generalSellerDescription',
+      desc: '',
+      args: [],
+    );
+  }
+
+  String get premiumSellerDescription {
+    return Intl.message(
+      "Get more visibility and exclusive tools.",
+      name: 'premiumSellerDescription',
+      desc: '',
+      args: [],
+    );
+  }
+
+  String get enterpriseSellerDescription {
+    return Intl.message(
+      "For large businesses and advanced needs.",
+      name: 'enterpriseSellerDescription',
+      desc: '',
+      args: [],
+    );
+  }
+
+  String get selectfromOurSellerPlans {
+    return Intl.message(
+      "Select from our seller plans",
+      name: 'selectfromOurSellerPlans',
+      desc: '',
+      args: [],
+    );
+  }
+
+  get legalName {
+    return Intl.message(
+      "Legal name",
+      name: 'legalName',
+      desc: '',
+      args: [],
+    );
+  }
+
+  get phoneNumber {
+    return Intl.message(
+      "Phone Number",
+      name: 'phoneNumber',
+      desc: '',
+      args: [],
+    );
+  }
+
+  get upgradeToSeller {
+    return Intl.message(
+      "Upgrade to seller",
+      name: 'upgradeToSeller',
+      desc: '',
+      args: [],
+    );
+  }
+
+  get changeSellerPlan {
+    return Intl.message(
+      "Change seller plan",
+      name: 'changeSellerPlan',
+      desc: '',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<S> {

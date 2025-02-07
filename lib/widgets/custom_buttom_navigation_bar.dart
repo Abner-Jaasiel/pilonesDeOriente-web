@@ -4,22 +4,25 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 
 class CustomButtomNavigationBar extends StatelessWidget {
-  const CustomButtomNavigationBar({
-    super.key,
-    this.height = 60,
-    this.mainAxisAlignment = MainAxisAlignment.spaceAround,
-    this.marginIconButton = EdgeInsets.zero,
-    this.shape = const CircularNotchedRectangle(),
-  });
+  const CustomButtomNavigationBar(
+      {super.key,
+      this.height = 60,
+      this.mainAxisAlignment = MainAxisAlignment.spaceAround,
+      this.marginIconButton = EdgeInsets.zero,
+      this.shape = const CircularNotchedRectangle(),
+      this.isSeller = false});
   final double height;
   final MainAxisAlignment mainAxisAlignment;
   final EdgeInsetsGeometry marginIconButton;
   final NotchedShape? shape;
+  final bool isSeller;
   @override
   Widget build(BuildContext context) {
     final NavigatorController navigatorController =
         Provider.of<NavigatorController>(context);
-
+    final int icoNumber1 = isSeller ? 1 : 1;
+    final int icoNumber2 = isSeller ? 2 : 1;
+    final int icoNumber3 = isSeller ? 3 : 2;
     return BottomAppBar(
       padding: EdgeInsets.zero,
       height: height,
@@ -42,30 +45,31 @@ class CustomButtomNavigationBar extends StatelessWidget {
               icon: const Icon(Icons.shopping_bag_outlined),
             ),
           ),
-          Container(
-            margin: marginIconButton,
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              color: navigatorController.currentIndex == 1
-                  ? Theme.of(context).colorScheme.primary
-                  : null,
-              onPressed: () {
-                navigatorController.pageController.animateToPage(1,
-                    duration: const Duration(milliseconds: 500),
-                    curve: Curves.easeInOut);
-              },
-              icon: const Icon(Icons.add),
+          if (isSeller)
+            Container(
+              margin: marginIconButton,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                color: navigatorController.currentIndex == icoNumber1
+                    ? Theme.of(context).colorScheme.primary
+                    : null,
+                onPressed: () {
+                  navigatorController.pageController.animateToPage(icoNumber1,
+                      duration: const Duration(milliseconds: 500),
+                      curve: Curves.easeInOut);
+                },
+                icon: const Icon(Icons.add),
+              ),
             ),
-          ),
           Container(
             margin: marginIconButton,
             child: IconButton(
               padding: EdgeInsets.zero,
-              color: navigatorController.currentIndex == 2
+              color: navigatorController.currentIndex == icoNumber2
                   ? Theme.of(context).colorScheme.primary
                   : null,
               onPressed: () {
-                navigatorController.pageController.animateToPage(2,
+                navigatorController.pageController.animateToPage(icoNumber2,
                     duration: const Duration(milliseconds: 500),
                     curve: Curves.easeInOut);
               },
@@ -76,11 +80,11 @@ class CustomButtomNavigationBar extends StatelessWidget {
             margin: marginIconButton,
             child: IconButton(
               padding: EdgeInsets.zero,
-              color: navigatorController.currentIndex == 3
+              color: navigatorController.currentIndex == icoNumber3
                   ? Theme.of(context).colorScheme.primary
                   : null,
               onPressed: () {
-                navigatorController.pageController.animateToPage(3,
+                navigatorController.pageController.animateToPage(icoNumber3,
                     duration: const Duration(milliseconds: 500),
                     curve: Curves.easeInOut);
               },

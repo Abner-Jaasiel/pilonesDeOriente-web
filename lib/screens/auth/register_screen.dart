@@ -204,11 +204,15 @@ class RegisterScreen extends StatelessWidget {
       await auth.registerWithEmailAndPassword(password, email, name);
       final User? user = FirebaseAuth.instance.currentUser;
       if (user != null) {
+        GoRouter.of(context).pop();
+
         GoRouter.of(context).push('/');
       } else {
+        GoRouter.of(context).pop();
         throw 'Registration failed';
       }
     } catch (e) {
+      GoRouter.of(context).pop();
       _showMessage(context, 'Failed to sign up: ${e.toString()}');
     }
   }

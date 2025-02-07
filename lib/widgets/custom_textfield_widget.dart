@@ -15,22 +15,28 @@ class CustomTextField extends StatelessWidget {
   final FocusNode? focusNode;
   final Color? backgroundColor;
   final double maxWidth;
-  const CustomTextField(
-      {super.key,
-      required this.hintText,
-      required this.prefixIcon,
-      this.filled = false,
-      this.onChanged,
-      this.onTap,
-      this.onTapOutside,
-      this.keyboardType = TextInputType.text,
-      this.height = 55,
-      this.obscureText = false,
-      this.controller,
-      this.autofocus = false,
-      this.focusNode,
-      this.backgroundColor = const Color.fromARGB(17, 91, 135, 192),
-      this.maxWidth = 500});
+  final bool enabled;
+  final String? Function(String?)? validator;
+
+  const CustomTextField({
+    super.key,
+    required this.hintText,
+    required this.prefixIcon,
+    this.filled = false,
+    this.onChanged,
+    this.onTap,
+    this.onTapOutside,
+    this.keyboardType = TextInputType.text,
+    this.height = 55,
+    this.obscureText = false,
+    this.controller,
+    this.autofocus = false,
+    this.focusNode,
+    this.backgroundColor = const Color.fromARGB(17, 91, 135, 192),
+    this.maxWidth = 500,
+    this.enabled = true,
+    this.validator,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +44,8 @@ class CustomTextField extends StatelessWidget {
       constraints: BoxConstraints(maxWidth: maxWidth),
       height: height,
       child: Center(
-        child: TextField(
+        child: TextFormField(
+          enabled: enabled,
           controller: controller,
           textAlignVertical: TextAlignVertical.center,
           focusNode: focusNode,
@@ -59,6 +66,7 @@ class CustomTextField extends StatelessWidget {
           onChanged: onChanged,
           onTap: onTap ?? () {},
           onTapOutside: onTapOutside ?? (x) {},
+          validator: validator,
         ),
       ),
     );

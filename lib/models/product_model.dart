@@ -42,8 +42,8 @@ class ProductModel {
   final String id;
   final String name;
   final String description;
-  final double? locationLatitude; // Latitud, puede ser nulo
-  final double? locationLongitude; // Longitud, puede ser nula
+  final double? locationLatitude;
+  final double? locationLongitude;
   final List<String> urlImage;
   final List<String>? url3dObject;
   final int rating;

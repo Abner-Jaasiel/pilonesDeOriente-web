@@ -8,6 +8,7 @@ import 'package:carkett/widgets/show_long_text_window.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ProductInfoPanelWidget extends StatelessWidget {
   const ProductInfoPanelWidget({
@@ -45,27 +46,57 @@ class ProductInfoPanelWidget extends StatelessWidget {
                       UserModel? model = UserModel.fromJson(
                           snapshotUser.data as Map<String, dynamic>);
 
-                      return IconButton(
-                        onPressed: () {
-                          GoRouter.of(context)
-                              .push('/user_perfile/false/${model.firebaseUid}');
-                        },
-                        icon: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisAlignment: MainAxisAlignment.start,
+                      return Expanded(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            CircleAvatar(
-                              radius: 20,
-                              backgroundImage: model.profileImageUrl != null
-                                  ? CachedNetworkImageProvider(
-                                      model.profileImageUrl!)
-                                  : const AssetImage(
-                                      'assets/images/profileUser.jpg'),
+                            IconButton(
+                              onPressed: () {
+                                GoRouter.of(context).push(
+                                    '/user_perfile/false/${model.firebaseUid}');
+                              },
+                              icon: Row(
+                                children: [
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 20,
+                                        backgroundImage: model
+                                                    .profileImageUrl !=
+                                                null
+                                            ? CachedNetworkImageProvider(
+                                                model.profileImageUrl!)
+                                            : const AssetImage(
+                                                'assets/images/profileUser.jpg'),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        snapshotUser.hasData
+                                            ? model.name
+                                            : 'No data',
+                                      ),
+                                      const SizedBox(width: 10),
+                                      if (model.seller != null)
+                                        const Icon(
+                                          Icons.verified,
+                                          color: Colors.blue,
+                                          size: 19,
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
-                            const SizedBox(width: 10),
-                            Text(
-                              snapshotUser.hasData ? model.name : 'No data',
-                            ),
+                            IconButton(
+                                onPressed: () {
+                                  final currentRoute =
+                                      'https://www.carkett.com/#${GoRouterState.of(context).uri.toString()}';
+                                  Share.share(currentRoute);
+                                },
+                                icon: const Icon(Icons.share))
                           ],
                         ),
                       );
@@ -98,7 +129,7 @@ class ProductInfoPanelWidget extends StatelessWidget {
           SizedBox(
             width: MediaQuery.of(context).size.width,
             child: Text(
-              "L ${product.price}",
+              getFormattedCurrency(product.price, context),
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                     fontSize: 24,

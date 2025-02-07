@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:carkett/generated/l10n.dart';
 import 'package:carkett/widgets/custom_textfield_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 customShowModalBottomSheet(BuildContext context, VoidCallback metho,
     TextEditingController textController, String buttonText) {
@@ -39,54 +40,78 @@ customShowModalBottomSheet(BuildContext context, VoidCallback metho,
   );
 }
 
-customShowModalBottomSheetDropdown(
-    {required BuildContext context,
-    required void Function(String? value) metho,
-    required TextEditingController textController,
-    required String textInput,
-    List<DropdownMenuItem<String>>? itemsDropdown,
-    required List<Widget> items}) {
+customShowModalBottomSheetDropdown({
+  required BuildContext context,
+  required void Function(String? value) metho,
+  required TextEditingController textController,
+  required String textInput,
+  required String key,
+  List<DropdownMenuItem<String>>? itemsDropdown,
+  required List<Widget> items,
+  required String defaultValue,
+}) {
+  String? selectedValueFromPrefs = "";
+
+  Future<void> loadValue() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    selectedValueFromPrefs = prefs.getString(key) ?? defaultValue;
+  }
+
   showModalBottomSheet(
     showDragHandle: true,
     isScrollControlled: true,
     context: context,
     builder: (BuildContext context) {
-      return Container(
-        constraints: const BoxConstraints(maxWidth: 520),
-        padding: EdgeInsets.only(
-          right: 20,
-          left: 20,
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: Container(
-          height: 300,
-          width: double.infinity,
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              if (items.isNotEmpty) ...items,
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 2, horizontal: 15),
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(17, 255, 255, 255),
-                  borderRadius: BorderRadius.circular(35.0),
-                ),
-                child: DropdownButton<String>(
-                  underline: Container(),
-                  items: itemsDropdown,
-                  hint: Text(
-                    textInput,
+      return FutureBuilder<void>(
+        future: loadValue(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          return Container(
+            constraints: const BoxConstraints(maxWidth: 520),
+            padding: EdgeInsets.only(
+              right: 20,
+              left: 20,
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: Container(
+              height: 300,
+              width: double.infinity,
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  if (items.isNotEmpty) ...items,
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 2, horizontal: 15),
+                    decoration: BoxDecoration(
+                      color: const Color.fromARGB(17, 255, 255, 255),
+                      borderRadius: BorderRadius.circular(35.0),
+                    ),
+                    child: DropdownButton<String>(
+                      value: selectedValueFromPrefs,
+                      underline: Container(),
+                      items: itemsDropdown,
+                      hint: Text(
+                        textInput,
+                      ),
+                      onChanged: (value) {
+                        metho(value);
+                        SharedPreferences.getInstance().then((prefs) {
+                          prefs.setString(key, value!);
+                        });
+                        Navigator.of(context, rootNavigator: true).pop();
+                      },
+                    ),
                   ),
-                  onChanged: (value) {
-                    metho(value);
-                  },
-                ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       );
     },
   );

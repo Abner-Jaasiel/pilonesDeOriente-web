@@ -1,3 +1,4 @@
+import 'package:carkett/providers/appconfig_controller.dart';
 import 'package:carkett/providers/navigator_controller.dart';
 import 'package:carkett/screens/home_screen.dart';
 import 'package:carkett/screens/seller/product_aggregator_screen.dart';
@@ -62,6 +63,8 @@ class WebStartScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final navigatorController = Provider.of<NavigatorController>(context);
+    AppConfigController appConfigController =
+        Provider.of<AppConfigController>(context);
 
     if (token != null) {
       navigatorController.initializePageController();
@@ -74,16 +77,17 @@ class WebStartScreen extends StatelessWidget {
                 navigatorController.setIndex(page);
               },
               controller: navigatorController.pageController,
-              children: const [
-                HomeScreen(),
-                ProductAggregatorScreen(),
-                ShoppingCartScreen(),
-                LoadUserProfileScreen(),
+              children: [
+                const HomeScreen(),
+                if (appConfigController.isSeller)
+                  const ProductAggregatorScreen(),
+                const ShoppingCartScreen(),
+                const LoadUserProfileScreen(),
               ],
             )
           : const HomeScreen(),
       bottomNavigationBar: token != null
-          ? const CustomButtomNavigationBar()
+          ? CustomButtomNavigationBar(isSeller: appConfigController.isSeller)
           : IconButton(
               onPressed: () {
                 GoRouter.of(context).push('/login');
@@ -193,9 +197,10 @@ class MobileStartScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final navigatorController = Provider.of<NavigatorController>(context);
+    AppConfigController appConfigController =
+        Provider.of<AppConfigController>(context);
 
     if (token != null) {
-      // Asegúrate de reinicializar el PageController solo cuando sea necesario.
       navigatorController.initializePageController();
     }
 
@@ -206,16 +211,17 @@ class MobileStartScreen extends StatelessWidget {
                 navigatorController.setIndex(page);
               },
               controller: navigatorController.pageController,
-              children: const [
-                HomeScreen(),
-                ProductAggregatorScreen(),
-                ShoppingCartScreen(),
-                LoadUserProfileScreen(),
+              children: [
+                const HomeScreen(),
+                if (appConfigController.isSeller)
+                  const ProductAggregatorScreen(),
+                const ShoppingCartScreen(),
+                const LoadUserProfileScreen(),
               ],
             )
           : const HomeScreen(),
       bottomNavigationBar: token != null
-          ? const CustomButtomNavigationBar()
+          ? CustomButtomNavigationBar(isSeller: appConfigController.isSeller)
           : IconButton(
               onPressed: () {
                 GoRouter.of(context).push('/login');

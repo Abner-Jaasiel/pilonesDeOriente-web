@@ -94,7 +94,23 @@
     "failedSignUp": "Failed to sign up: ",
     "logInToContinue'": "Log in to continue",
     "dontHaveAnAccount": "Don't have an account?",
-    "welcomeToCarkett": "Welcome to Carkett"
-    
-   
+    "welcomeToCarkett": "Welcome to Carkett",
+    "login_title": "Welcome to Our App",
+  "login_subtitle": "Log in to continue", 
+  "identity_card_id": "Identity Card ID",
+  "log_in": "Log In",
+  "dont_have_account": "Don't have an account?",
+  "sign_up": "Sign Up",
+  "select_seller_type": "Select Seller Type",
+  "general_seller": "General Seller",
+  "premium_seller": "Premium Seller",
+  "enterprise_seller": "Enterprise Seller",
+  "general_seller_desc": "Start selling with basic features.",
+  "premium_seller_desc": "Get more visibility and exclusive tools.",
+  "enterprise_seller_desc": "For large businesses and advanced needs.",
+  "selectfromOurSellerPlans": "Select from our seller plans",
+   "legalName": "Legal Name",
+   "phoneNumber": "Phone Number",
+   "upgradeToSeller": "Upgrade to seller",
+   "changeSellerPlan": "Change seller plan"
 }

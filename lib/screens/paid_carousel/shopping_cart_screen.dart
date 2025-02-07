@@ -178,8 +178,10 @@ import 'dart:convert';
 
 import 'package:carkett/generated/l10n.dart';
 import 'package:carkett/models/cart_item_model.dart';
+import 'package:carkett/providers/appconfig_controller.dart';
 import 'package:carkett/providers/payment_controller.dart';
 import 'package:carkett/services/api_service.dart';
+import 'package:carkett/utils/utils.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -203,13 +205,11 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
     _loadSavedCartItems();
   }
 
-  // Método para cargar los productos guardados desde SharedPreferences
   Future<void> _loadSavedCartItems() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? savedData = prefs.getString('cartItems');
 
     if (savedData != null) {
-      // Deserializa los productos guardados si existen
       setState(() {
         cartItems = CartItemModel.fromList(
           List<Map<String, dynamic>>.from(jsonDecode(savedData)),
@@ -217,14 +217,13 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
         isLoading = false;
       });
     } else {
-      // Si no existen, realiza el fetch como de costumbre
       _fetchCartItems();
     }
   }
 
-  // Método para hacer fetch de los productos del carrito
   Future<void> _fetchCartItems() async {
     User? user = FirebaseAuth.instance.currentUser;
+
     if (user != null) {
       final fetchedCartItems =
           await APIService().fetchCartItems(user.uid, status: 'pending');
@@ -237,7 +236,6 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
           isLoading = false;
         });
 
-        // Guardar los productos obtenidos en SharedPreferences
         SharedPreferences prefs = await SharedPreferences.getInstance();
         prefs.setString('cartItems', jsonEncode(fetchedCartItems));
       }
@@ -326,7 +324,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       Text(
-                                        '\$${(cartItems[index].price * cartItems[index].quantity).toStringAsFixed(2)}',
+                                        '${getFormattedCurrency(cartItems[index].price * cartItems[index].quantity, context)} ',
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleLarge
@@ -356,7 +354,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
-                            'Total a pagar: \$${subtotal.toStringAsFixed(2)}',
+                            'Total a pagar: ${getFormattedCurrency(subtotal, context)}',
                             style: Theme.of(context).textTheme.headlineMedium,
                             textAlign: TextAlign.center,
                           ),

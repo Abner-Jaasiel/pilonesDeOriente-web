@@ -7,6 +7,8 @@ class ProfileModel {
   final String identityNumber;
   final double locationLatitude;
   final double locationLongitude;
+  final String phoneNumber;
+  final bool isDefault;
 
   ProfileModel({
     required this.id,
@@ -17,6 +19,8 @@ class ProfileModel {
     required this.identityNumber,
     required this.locationLatitude,
     required this.locationLongitude,
+    required this.phoneNumber,
+    required this.isDefault,
   });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
@@ -27,13 +31,14 @@ class ProfileModel {
       locationDescription: json['location_description'],
       cardNumber: json['card_number'],
       identityNumber: json['identity_number'],
-      // Convierte de String a double si es necesario
       locationLatitude: (json['location_latitude'] != null)
           ? double.tryParse(json['location_latitude'].toString()) ?? 0.0
           : 0.0,
       locationLongitude: (json['location_longitude'] != null)
           ? double.tryParse(json['location_longitude'].toString()) ?? 0.0
           : 0.0,
+      phoneNumber: json['phone_number'] ?? '',
+      isDefault: json['is_default'] ?? false,
     );
   }
 
@@ -47,6 +52,8 @@ class ProfileModel {
       'identity_number': identityNumber,
       'location_latitude': locationLatitude,
       'location_longitude': locationLongitude,
+      'phone_number': phoneNumber,
+      'is_default': isDefault,
     };
   }
 }

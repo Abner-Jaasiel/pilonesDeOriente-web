@@ -1,6 +1,8 @@
 import 'package:carkett/firebase_options.dart';
 import 'package:carkett/generated/l10n.dart';
+import 'package:carkett/providers/aggregator_controller.dart';
 import 'package:carkett/providers/appbar_controller.dart';
+import 'package:carkett/providers/appconfig_controller.dart';
 import 'package:carkett/providers/chat_model_ai_controller.dart';
 import 'package:carkett/providers/home_controller.dart';
 import 'package:carkett/providers/language_controller.dart';
@@ -25,6 +27,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
   SharedPreferences language = await SharedPreferences.getInstance();
   await dotenv.load(fileName: ".env");
   runApp(MyApp(language));
@@ -53,10 +56,11 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (context) => HomeController()),
         ChangeNotifierProvider(create: (context) => PaymentController()),
         ChangeNotifierProvider(create: (context) => LocationController()),
-        // ChangeNotifierProvider(create: (context) => RouteManagerController())
+        ChangeNotifierProvider(create: (context) => AppConfigController()),
       ],
       child: Builder(builder: (context) {
         Locale currentLocale = Provider.of<LanguageController>(context).locale;
+        Provider.of<AppConfigController>(context).loadConfig();
         final getTheme = context.watch<ThemeController>().getTheme();
         return MaterialApp.router(
           locale: currentLocale,

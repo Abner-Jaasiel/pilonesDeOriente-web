@@ -1,3 +1,4 @@
+import 'package:carkett/widgets/super_progressindicator_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:carkett/generated/l10n.dart';
 import 'package:provider/provider.dart';
@@ -56,7 +57,6 @@ class LoginScreen extends StatelessWidget {
                       offset: const Offset(0, 12),
                     ),
                   ],
-                  // backdropFilter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -87,7 +87,6 @@ class LoginScreen extends StatelessWidget {
                       hintText: S.current.email,
                       prefixIcon: Icons.email_outlined,
                       filled: true,
-                      //  fillColor: theme.colorScheme.background,
                       onChanged: (value) => registerData.email = value,
                     ),
                     const SizedBox(height: 16),
@@ -95,7 +94,6 @@ class LoginScreen extends StatelessWidget {
                       hintText: S.current.password,
                       prefixIcon: Icons.lock_outline,
                       filled: true,
-                      // fillColor: theme.colorScheme.background,
                       obscureText: true,
                       onChanged: (value) => registerData.password = value,
                     ),
@@ -155,6 +153,7 @@ class LoginScreen extends StatelessWidget {
 
   Future<void> _login(
       RegisterDataController registerData, BuildContext context) async {
+    superProgressIndicator(context);
     final auth = AuthFirebaseService();
     final password = registerData.password;
     final email = registerData.email;
@@ -164,8 +163,11 @@ class LoginScreen extends StatelessWidget {
       await auth.signInWithEmailAndPassword(password, email);
       final User? user = FirebaseAuth.instance.currentUser;
       if (user != null) {
+        GoRouter.of(context).pop();
+
         GoRouter.of(context).push('/');
       } else {
+        GoRouter.of(context).pop();
         throw 'The user does not exist';
       }
     } catch (e) {

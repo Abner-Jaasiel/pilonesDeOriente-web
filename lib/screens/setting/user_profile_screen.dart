@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carkett/generated/l10n.dart';
 import 'package:carkett/models/user_model.dart';
+import 'package:carkett/providers/appconfig_controller.dart';
 import 'package:carkett/services/api_service.dart';
 import 'package:carkett/services/auth_firebase_service.dart';
 import 'package:carkett/services/file_service.dart';
@@ -10,11 +11,13 @@ import 'package:carkett/widgets/custom_appbar_widget.dart';
 import 'package:carkett/widgets/custom_show_modal_bottom_sheet.dart';
 import 'package:carkett/widgets/flutter_map_widget.dart';
 import 'package:carkett/widgets/home_screen_widgets/product_carousels_zone_list_widget.dart';
+import 'package:carkett/widgets/map_buttom_widget.dart';
 import 'package:carkett/widgets/super_progressindicator_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 final bucketGlobal = PageStorageBucket();
@@ -78,16 +81,18 @@ class _LoadUserProfileScreenState extends State<LoadUserProfileScreen> {
               if (snapshot.data == null) {
                 return const Center(child: Text('No userdata available.'));
               }
-
               UserModel data = snapshot.data as UserModel;
+              AppConfigController appConfigController =
+                  Provider.of<AppConfigController>(context);
 
+              appConfigController.isSeller = data.seller != null ? true : false;
               return true
                   ? UserProfileScreen(
                       data: data,
                       user: user,
                       onRefresh: () => refreshData(user!),
                       isMy: isMy)
-                  : Scaffold(
+                  : Container(); /*Scaffold(
                       appBar: CustomAppbarWidget(),
                       body: Center(
                         child: Container(
@@ -186,8 +191,14 @@ class _LoadUserProfileScreenState extends State<LoadUserProfileScreen> {
 
                                                     setState(() {
                                                       APIService()
-                                                          .updateUserData(null,
-                                                              null, urlImage);
+                                                          .updateUserData(
+                                                              null,
+                                                              null,
+                                                              urlImage,
+                                                              null,
+                                                              null,
+                                                              null,
+                                                              null);
                                                     });
                                                   }
                                                 }
@@ -237,6 +248,10 @@ class _LoadUserProfileScreenState extends State<LoadUserProfileScreen> {
                                             APIService().updateUserData(
                                                 textController.text,
                                                 null,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
                                                 null);
                                           });
                                         }, textController, S.current.save);
@@ -268,8 +283,14 @@ class _LoadUserProfileScreenState extends State<LoadUserProfileScreen> {
                                           }
 
                                           setState(() {
-                                            APIService().updateUserData(null,
-                                                textController.text, null);
+                                            APIService().updateUserData(
+                                                null,
+                                                textController.text,
+                                                null,
+                                                null,
+                                                null,
+                                                null,
+                                                null);
                                           });
                                         }, textController, S.current.save);
                                       },
@@ -365,7 +386,7 @@ class _LoadUserProfileScreenState extends State<LoadUserProfileScreen> {
                           }),
                         ),
                       ),
-                    );
+                    );*/
             })
         : const Center(child: CircularProgressIndicator());
   }
@@ -387,6 +408,7 @@ class UserProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print("${data.seller}🤺🤺🤺🤺🤺🤺");
     return Scaffold(
       appBar: CustomAppbarWidget(),
       body: Center(
@@ -465,8 +487,17 @@ class UserProfileScreen extends StatelessWidget {
                                           update: "profile_image_url",
                                           valueUpdate: urlImage);
 
-                                      await APIService()
-                                          .updateUserData(null, null, urlImage);
+                                      await APIService().updateUserData(
+                                          null,
+                                          null,
+                                          urlImage,
+                                          null,
+                                          null,
+                                          null,
+                                          null,
+                                          null,
+                                          null,
+                                          null);
                                       onRefresh();
                                     }
                                   }
@@ -485,8 +516,21 @@ class UserProfileScreen extends StatelessWidget {
                               ),
                             ),
                           ),
+                        if (data.seller != null && !isMy)
+                          Positioned(
+                            bottom: 10,
+                            child: Container(
+                              margin: const EdgeInsets.only(left: 140),
+                              child: const Icon(
+                                Icons.verified,
+                                color: Colors.blue,
+                                size: 30,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
+
                     const SizedBox(height: 20),
                     ListTile(
                       onTap: isMy
@@ -505,7 +549,16 @@ class UserProfileScreen extends StatelessWidget {
                                 Future.delayed(const Duration(seconds: 2));
 
                                 await APIService().updateUserData(
-                                    textController.text, null, null);
+                                    textController.text,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null);
                                 onRefresh();
                               }, textController, S.current.save);
                             }
@@ -531,7 +584,16 @@ class UserProfileScreen extends StatelessWidget {
                                 Future.delayed(const Duration(seconds: 2));
 
                                 await APIService().updateUserData(
-                                    null, textController.text, null);
+                                    null,
+                                    textController.text,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null,
+                                    null);
                                 onRefresh();
                               }, textController, S.current.save);
                             }
@@ -549,34 +611,7 @@ class UserProfileScreen extends StatelessWidget {
                         title: Text(S.current.profiles),
                         subtitle: Text(S.current.profiles),
                       ),
-                    if (isMy)
-                      ListTile(
-                        onTap: () {
-                          GoRouter.of(context).push("/create_store");
-                        },
-                        leading: const Icon(Icons.store),
-                        title: Text(S.current.createStore),
-                        subtitle: Text(S.current.createStore),
-                      ),
-                    if (isMy)
-                      ListTile(
-                        onTap: () async {
-                          final Uri url = Uri.parse(
-                              'https://gestionapp-zeta.vercel.app/#/');
-                          if (await canLaunchUrl(url)) {
-                            await launchUrl(url);
-                          }
-                        },
-                        leading: const Icon(Icons.settings_suggest_rounded),
-                        title: Text(S.current.sellerManagement),
-                        subtitle: Text(S.current.sellerManagement),
-                      ),
-                    const SizedBox(height: 10),
-                    ListTile(
-                      leading: const Icon(Icons.info),
-                      title: Text(S.current.aboutMe),
-                      subtitle: Text("(${S.current.unverifiedUser})"),
-                    ),
+
                     if (isMy)
                       ListTile(
                         onTap: () {
@@ -595,59 +630,75 @@ class UserProfileScreen extends StatelessWidget {
                         title: Text(S.current.setting),
                         subtitle: Text(S.current.setting),
                       ),
+                    const SizedBox(height: 20),
+                    if (isMy && data.seller == null)
+                      ListTile(
+                        onTap: () {
+                          GoRouter.of(context).push('/seller_selection');
+                        },
+                        leading: const Icon(Icons.upload_outlined),
+                        title: Text(S.current.upgradeToSeller),
+                        subtitle: Text(S.current.selectSellerType),
+                      ),
+                    if (isMy && data.seller != null)
+                      ListTile(
+                        onTap: () {
+                          GoRouter.of(context).push('/seller_selection');
+                        },
+                        leading: const Icon(Icons.admin_panel_settings_sharp),
+                        title: Text(S.current.changeSellerPlan),
+                        subtitle: Text(data.seller ?? ""),
+                      ),
+                    const SizedBox(height: 20),
+                    //  const Divider(),
+                    if (isMy &&
+                        (data.seller == "premium" ||
+                            data.seller == "enterprise"))
+                      Center(
+                        child: Text("${S.current.sellerManagement}:",
+                            style: Theme.of(context).textTheme.bodyLarge),
+                      ),
+                    //  const Divider(),
                     const SizedBox(height: 10),
-                    Stack(
-                      alignment: AlignmentDirectional.center,
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 10),
-                          constraints: const BoxConstraints(maxWidth: 500),
-                          height: 200,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(15),
-                            child: const FlutterMapWidget(lat: 22, long: 22),
-                          ),
-                        ),
-                        InkWell(
-                          onTap: () {
-                            customShowModalBottomListItem(
-                              context: context,
-                              title: "Map",
-                              items: [
-                                Expanded(
-                                  child: SingleChildScrollView(
-                                    child: Container(
-                                      padding: const EdgeInsets.all(7),
-                                      decoration: BoxDecoration(
-                                        color: const Color.fromARGB(
-                                            90, 92, 119, 122),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      height: 550,
-                                      width: double.infinity,
-                                      child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(20),
-                                        child: const FlutterMapWidget(
-                                          lat: 22,
-                                          long: 22,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                              height: constraints.maxHeight,
-                              padding: const EdgeInsets.all(0),
-                            );
-                          },
-                          child: Container(
-                            height: 130,
-                            margin: const EdgeInsets.only(top: 100),
-                          ),
-                        ),
-                      ],
-                    ),
+                    if (isMy &&
+                        (data.seller == "premium" ||
+                            data.seller == "enterprise"))
+                      ListTile(
+                        onTap: () {
+                          GoRouter.of(context).push("/create_store");
+                        },
+                        leading: const Icon(Icons.store),
+                        title: Text(S.current.createStore),
+                        subtitle: Text(S.current.createStore),
+                      ),
+                    if (isMy &&
+                        (data.seller == "premium" ||
+                            data.seller == "enterprise"))
+                      ListTile(
+                        onTap: () async {
+                          final Uri url = Uri.parse(
+                              'https://gestionapp-zeta.vercel.app/#/');
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(url);
+                          }
+                        },
+                        leading: const Icon(Icons.settings_suggest_rounded),
+                        title: Text(S.current.sellerManagement),
+                        subtitle: Text(S.current.sellerManagement),
+                      ),
+                    if (data.seller != null)
+                      MapButtomWidget(
+                        lat: data.locationLatitude ?? 0,
+                        long: data.locationLongitude ?? 0,
+                        height: constraints.maxHeight / 2.5,
+                      ),
+                    const SizedBox(height: 10),
+                    if (data.seller != null)
+                      ListTile(
+                        leading: const Icon(Icons.info),
+                        title: Text(S.current.aboutMe),
+                        subtitle: const Text("Usuario Verificado"),
+                      ),
                     if (isMy)
                       ListTile(
                         onTap: () async {

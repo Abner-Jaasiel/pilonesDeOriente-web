@@ -1,7 +1,10 @@
 import 'package:carkett/providers/location_controller.dart';
 import 'package:carkett/utils/utils.dart';
+import 'package:carkett/widgets/message_container_widget.dart';
+import 'package:carkett/widgets/super_progressindicator_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -15,6 +18,7 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   LatLng? selectedLocation;
+  String locationMessage = "Ubicación no obtenida";
 
   Future<void> _fetchLocationName(
       LatLng location, LocationController locationController) async {
@@ -24,6 +28,16 @@ class _MapScreenState extends State<MapScreen> {
 
     if (locationName != null) {
       locationController.setLocationName(locationName);
+    }
+  }
+
+  Future<void> _getLocation(LocationController locationController) async {
+    Position? position = await LocationService.getCurrentLocation();
+    if (position != null) {
+      selectedLocation = LatLng(position.latitude, position.longitude);
+      setState(() {
+        locationMessage = "No se pudo obtener la ubicación.";
+      });
     }
   }
 
@@ -42,18 +56,17 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    LocationController locationController =
+        Provider.of<LocationController>(context, listen: false);
     return Scaffold(
       appBar: AppBar(title: const Text("Select Location")),
       body: Stack(
         children: [
           FlutterMap(
             options: MapOptions(
-              initialCenter: selectedLocation ?? const LatLng(0, 0),
+              initialCenter: selectedLocation ?? const LatLng(14.0333, 86.5833),
               initialZoom: 13,
               onTap: (tapPosition, point) async {
-                LocationController locationController =
-                    Provider.of<LocationController>(context, listen: false);
-
                 setState(() {
                   selectedLocation = point;
                 });
@@ -110,11 +123,7 @@ class _MapScreenState extends State<MapScreen> {
                 GoRouter.of(context).pop();
               },
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: Colors.deepPurple,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                backgroundColor: Theme.of(context).primaryColor,
               ),
               child: const Text(
                 "Confirm Location",
@@ -122,6 +131,50 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ),
           ),
+          Positioned(
+              top: 4,
+              left: 1,
+              child: Row(
+                children: [
+                  RawMaterialButton(
+                    onPressed: () async {
+                      superProgressIndicator(context);
+                      try {
+                        await _getLocation(locationController);
+                        locationController.setLocation(
+                            selectedLocation ?? const LatLng(14.0333, 86.5833));
+
+                        await _fetchLocationName(
+                            selectedLocation!, locationController);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              "Location Confirmed: ${locationController.locationName}",
+                            ),
+                          ),
+                        );
+                      } on Exception catch (e) {
+                        // TODO
+                      }
+                      GoRouter.of(context).pop();
+                    },
+                    elevation: 1.0,
+                    fillColor: Theme.of(context).scaffoldBackgroundColor,
+                    padding: const EdgeInsets.all(15.0),
+                    shape: const CircleBorder(),
+                    child: const Icon(
+                      Icons.location_on,
+                      size: 28.0,
+                    ),
+                  ),
+                  const MessageContainerWidget(
+                    message: "< GPS",
+                    maxWidth: 200,
+                    margin: 0,
+                    rewrite: true,
+                  ),
+                ],
+              )),
         ],
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carkett/models/user_model.dart';
 import 'package:carkett/providers/appbar_controller.dart';
+import 'package:carkett/providers/appconfig_controller.dart';
 import 'package:carkett/providers/home_controller.dart';
 import 'package:carkett/utils/utils.dart';
 import 'package:carkett/widgets/cards/slider_widget.dart';
@@ -76,8 +77,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   widgetZone: Row(
                     children: [
                       IconButton(
-                          onPressed: () {
-                            GoRouter.of(context).push('/login');
+                          onPressed: () async {
+                            await GoRouter.of(context).push('/login');
                           },
                           icon: const Icon(Icons.login)),
                       const SizedBox(width: 5),
@@ -103,6 +104,10 @@ class _HomeScreenState extends State<HomeScreen> {
               }
 
               UserModel data = snapshot.data as UserModel;
+              AppConfigController appConfigController =
+                  Provider.of<AppConfigController>(context);
+
+              appConfigController.isSeller = data.seller != null ? true : false;
 
               return Scaffold(
                 extendBodyBehindAppBar: true,
@@ -132,10 +137,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               backgroundColor: Colors.grey[300],
                               child: InkWell(
                                 onTap: () {
-                                  context.push(
-                                    '/user_perfile',
-                                    extra: {'isMy': true},
-                                  );
+                                  GoRouter.of(context)
+                                      .push('/seller_selection');
                                 },
                                 child: ClipOval(
                                   child: data.profileImageUrl != null &&

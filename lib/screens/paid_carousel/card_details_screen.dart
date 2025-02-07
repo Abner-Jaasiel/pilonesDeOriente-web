@@ -1,4 +1,6 @@
+import 'package:carkett/providers/appconfig_controller.dart';
 import 'package:carkett/services/api_service.dart';
+import 'package:carkett/utils/utils.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_credit_card/flutter_credit_card.dart';
@@ -6,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:carkett/providers/payment_controller.dart';
 import 'package:carkett/widgets/custom_textfield_widget.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CardDetailsScreen extends StatefulWidget {
   const CardDetailsScreen({super.key});
@@ -44,7 +47,7 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Monto a pagar: \$${paymentController.amountToPay}",
+                  "Monto a pagar: ${getFormattedCurrency(paymentController.amountToPay, context)}",
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 const SizedBox(height: 20),

@@ -1,5 +1,6 @@
 import 'package:carkett/models/perfile_model.dart';
 import 'package:carkett/screens/auth/login_screen.dart';
+import 'package:carkett/screens/auth/login_seller_screen.dart';
 import 'package:carkett/screens/auth/register_screen.dart';
 import 'package:carkett/screens/paid_carousel/payment_information_screen.dart';
 import 'package:carkett/screens/paid_carousel/checkout_screen.dart';
@@ -15,6 +16,7 @@ import 'package:carkett/screens/product_zone/product_screen.dart';
 import 'package:carkett/screens/seller/create_store_screen.dart';
 import 'package:carkett/screens/seller/html_page_screen.dart';
 import 'package:carkett/screens/seller/product_aggregator_screen.dart';
+import 'package:carkett/screens/seller/seller_selection_screen.dart';
 import 'package:carkett/screens/setting/edit_profile_screen.dart';
 import 'package:carkett/screens/setting/language_screen.dart';
 import 'package:carkett/screens/setting/profile_list_screen.dart';
@@ -34,6 +36,10 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/login',
       builder: (context, state) => const LoginScreen(),
+    ),
+    GoRoute(
+      path: '/seller_selection',
+      builder: (context, state) => const SellerSelectionScreen(),
     ),
     GoRoute(
       path: '/register',
@@ -194,6 +200,13 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/profile_selection',
       builder: (context, state) => const ProfileSelectionScreen(),
+    ),
+    GoRoute(
+      path: '/login_seller',
+      builder: (context, state) {
+        final accountType = state.extra as String? ?? 'general';
+        return LoginSellerScreen(accountType: accountType);
+      },
     ),
   ],
 );

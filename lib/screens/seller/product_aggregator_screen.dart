@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:carkett/generated/l10n.dart';
+import 'package:carkett/models/product_model.dart';
 import 'package:carkett/providers/location_controller.dart';
 import 'package:carkett/providers/product_aggregator_controller.dart';
 import 'package:carkett/screens/product_zone/product_screen.dart';
@@ -10,13 +11,18 @@ import 'package:carkett/widgets/seller/categories_menu_widget.dart';
 import 'package:carkett/widgets/super_progressindicator_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:markdown_editor_plus/markdown_editor_plus.dart';
 
 class ProductAggregatorScreen extends StatefulWidget {
-  const ProductAggregatorScreen({super.key});
+  final String? productId;
+
+  const ProductAggregatorScreen(
+      {super.key, this.productId = "da09d3e5-b6b2-464f-8113-73d2d1fbfd47"});
 
   @override
   _ProductAggregatorScreenState createState() =>
@@ -26,14 +32,70 @@ class ProductAggregatorScreen extends StatefulWidget {
 class _ProductAggregatorScreenState extends State<ProductAggregatorScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-
   final TextEditingController _priceController =
       TextEditingController(text: "0");
   final List<String> _tags = [];
-
+  ProductModel? _product;
+  bool _isLoading = false;
   int _categoryId = 0;
-
   int _currentStep = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.productId != null) {
+      _loadProduct();
+    }
+  }
+
+  Future<void> _loadProduct() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      ProductAggregatorController productAggregatorController =
+          Provider.of<ProductAggregatorController>(context, listen: false);
+      LocationController locationController =
+          Provider.of<LocationController>(context, listen: false);
+      final data = await APIService().fetchProduct(widget.productId!);
+      final product = ProductModel.fromJson(data);
+
+      setState(() {
+        _product = product;
+        _nameController.text = product.name;
+        _descriptionController.text = product.description;
+        _priceController.text = product.price.toString();
+        _tags.addAll(product.tags);
+        if (product.locationLatitude != null &&
+            product.locationLongitude != null) {
+          locationController.setLocation(
+              LatLng(product.locationLatitude!, product.locationLongitude!));
+        }
+        productAggregatorController.categoryName = product.categoryName;
+        _categoryId = product.categoryId;
+
+        if (product.locationLatitude != null &&
+            product.locationLongitude != null) {
+          final locationController =
+              Provider.of<LocationController>(context, listen: false);
+          locationController.setLocation(
+              LatLng(product.locationLatitude!, product.locationLongitude!));
+        }
+      });
+    } catch (e) {
+      /*  ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al cargar el producto: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );*/
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   void _addTag(String tag) {
     if (tag.isNotEmpty) {
@@ -79,13 +141,16 @@ class _ProductAggregatorScreenState extends State<ProductAggregatorScreen> {
         "seller_firebase_uid": user.uid,
         "location_latitude": locationController.locationLat,
         "location_longitude": locationController.locationLng,
-        // "location_id": [_locationController.text],
         "stock": null,
         "price": double.tryParse(_priceController.text) ?? 0,
         "tags": _tags,
         "category_id": _categoryId,
         "color": ""
       };
+
+      if (widget.productId != null) {
+        data["id"] = widget.productId;
+      }
 
       List<String> missingFields = [];
       if (data["name"].isEmpty) missingFields.add("Nombre");
@@ -110,13 +175,15 @@ class _ProductAggregatorScreenState extends State<ProductAggregatorScreen> {
 
       APIService apiService = APIService();
       final Map<String, dynamic>? productResponse =
-          await apiService.sendProductToServer(data);
+          await apiService.sendProductToServer(data,
+              route: widget.productId != null ? "/update" : "/",
+              method: widget.productId != null ? "PATCH" : "POST");
 
       if (productResponse != null) {
         ProductAggregatorController productAggregatorController =
             Provider.of<ProductAggregatorController>(context, listen: false);
-        final idProduct = productResponse["productId"];
-        // ignore: use_build_context_synchronously
+        final idProduct = productResponse["productId"] ?? widget.productId;
+
         superProgressIndicator(context);
         for (int i = 0;
             i < productAggregatorController.pickedFile.length;
@@ -129,16 +196,16 @@ class _ProductAggregatorScreenState extends State<ProductAggregatorScreen> {
           }
         }
 
-        await apiService.sendProductToServer(
-            {"urlimage": urlImage, "id": productResponse["productId"]},
-            route: "/updateImage", method: "PATCH");
-        // ignore: use_build_context_synchronously
+        if (urlImage.isNotEmpty) {
+          await apiService.sendProductToServer(
+              {"urlimage": urlImage, "id": idProduct},
+              route: "/updateImage", method: "PATCH");
+        }
+
         Navigator.of(context).pop();
         _nameController.clear();
         _descriptionController.clear();
-
         _priceController.clear();
-
         urlImage.clear();
         _tags.clear();
 
@@ -393,116 +460,6 @@ class StepOne extends StatelessWidget {
     );
   }
 }
-/*
-class StepTwo extends StatefulWidget {
-  final TextEditingController descriptionController;
-  final Function(String) addTag;
-  final Function(int) addCategory;
-  final List<String> tags;
-
-  const StepTwo({
-    super.key,
-    required this.addTag,
-    required this.addCategory,
-    required this.descriptionController,
-    required this.tags,
-  });
-
-  @override
-  _StepTwoState createState() => _StepTwoState();
-}
-
-class _StepTwoState extends State<StepTwo> {
-  late TextEditingController _tagController;
-  late List<String> tags;
-
-  @override
-  void initState() {
-    super.initState();
-    _tagController = TextEditingController();
-    tags = List.from(widget.tags);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const SizedBox(height: 26.0),
-        TextField(
-          controller: widget.descriptionController,
-          keyboardType: TextInputType.multiline,
-          maxLines: 6,
-          minLines: 4,
-          decoration: InputDecoration(
-            hintText: S.current.description,
-            fillColor: const Color.fromARGB(17, 91, 135, 192),
-            border: const OutlineInputBorder(
-              borderSide: BorderSide.none,
-              borderRadius: BorderRadius.all(Radius.circular(20)),
-            ),
-            filled: true,
-            contentPadding: const EdgeInsets.all(16.0),
-          ),
-        ),
-        const SizedBox(height: 16.0),
-        const Text("Add Tags: "),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _tagController,
-                decoration: InputDecoration(
-                  hintText: "Tag",
-                  prefixIcon: const Icon(Icons.tag),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                ),
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: () {
-                final tag = _tagController.text.trim();
-                if (tag.isNotEmpty) {
-                  setState(() {
-                    tags.add(tag);
-                  });
-                  widget.addTag(tag);
-                  _tagController.clear();
-                }
-              },
-            ),
-          ],
-        ),
-        const SizedBox(height: 16.0),
-        const Text("Added Tags:"),
-        Wrap(
-          children: tags.map((tag) {
-            return Chip(
-              label: Text(tag),
-              deleteIcon: const Icon(Icons.delete),
-              onDeleted: () {
-                setState(() {
-                  tags.remove(tag);
-                });
-              },
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 16.0),
-        const Text("Add Category: "),
-        CategoriesMenuWidget(
-          categories: widget.tags,
-          addCategory: widget.addCategory,
-        ),
-      ],
-    );
-  }
-}
-*/
-
-/*
 
 class StepTwo extends StatefulWidget {
   final TextEditingController descriptionController;
@@ -524,190 +481,7 @@ class StepTwo extends StatefulWidget {
 
 class _StepTwoState extends State<StepTwo> {
   late TextEditingController _tagController;
-  late List<String> tags;
-
-  List<Map<String, TextEditingController>> features = [];
-
-  void _addFeatureField() {
-    setState(() {
-      features.add({
-        "title": TextEditingController(),
-        "description": TextEditingController(),
-      });
-    });
-  }
-
-  void _concatenateFeatures() {
-    String updatedDescription = widget.descriptionController.text;
-
-    for (var feature in features) {
-      final title = feature["title"]?.text.trim() ?? "";
-      final desc = feature["description"]?.text.trim() ?? "";
-      if (title.isNotEmpty && desc.isNotEmpty) {
-        updatedDescription = "- **$title**: $desc\n$updatedDescription";
-      }
-    }
-
-    setState(() {
-      widget.descriptionController.text = updatedDescription;
-      features.clear(); // Clear features after concatenation
-    });
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _tagController = TextEditingController();
-    tags = List.from(widget.tags);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const SizedBox(height: 16),
-        TextField(
-          controller: widget.descriptionController,
-          keyboardType: TextInputType.multiline,
-          maxLines: 6,
-          minLines: 4,
-          decoration: const InputDecoration(
-            hintText: "Descripción del producto",
-            fillColor: Color.fromARGB(17, 91, 135, 192),
-            border: OutlineInputBorder(
-              borderSide: BorderSide.none,
-              borderRadius: BorderRadius.all(Radius.circular(20)),
-            ),
-            filled: true,
-            contentPadding: EdgeInsets.all(16.0),
-          ),
-        ),
-        const SizedBox(height: 16),
-        const Text("Agregar característica:"),
-        for (int i = 0; i < features.length; i++) ...[
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: features[i]["title"],
-                  decoration: const InputDecoration(
-                    hintText: "Título de la característica",
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  controller: features[i]["description"],
-                  decoration: const InputDecoration(
-                    hintText: "Descripción",
-                  ),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete),
-                onPressed: () {
-                  setState(() {
-                    features.removeAt(i);
-                  });
-                },
-              ),
-            ],
-          ),
-        ],
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            ElevatedButton.icon(
-              onPressed: _addFeatureField,
-              icon: const Icon(Icons.add),
-              label: const Text("Agregar más"),
-            ),
-            const SizedBox(width: 16),
-            ElevatedButton(
-              onPressed: _concatenateFeatures,
-              child: const Text("Guardar características"),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16.0),
-        const Text("Add Tags: "),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _tagController,
-                decoration: InputDecoration(
-                  hintText: "Tag",
-                  prefixIcon: const Icon(Icons.tag),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                ),
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: () {
-                final tag = _tagController.text.trim();
-                if (tag.isNotEmpty) {
-                  setState(() {
-                    tags.add(tag);
-                  });
-                  widget.addTag(tag);
-                  _tagController.clear();
-                }
-              },
-            ),
-          ],
-        ),
-        const SizedBox(height: 16.0),
-        const Text("Added Tags:"),
-        Wrap(
-          children: tags.map((tag) {
-            return Chip(
-              label: Text(tag),
-              deleteIcon: const Icon(Icons.delete),
-              onDeleted: () {
-                setState(() {
-                  tags.remove(tag);
-                });
-              },
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 16.0),
-        const Text("Add Category: "),
-        CategoriesMenuWidget(
-          categories: widget.tags,
-          addCategory: widget.addCategory,
-        ),
-      ],
-    );
-  }
-}
-*/
-class StepTwo extends StatefulWidget {
-  final TextEditingController descriptionController;
-  final Function(String) addTag;
-  final Function(int) addCategory;
-  final List<String> tags;
-
-  const StepTwo({
-    super.key,
-    required this.addTag,
-    required this.addCategory,
-    required this.descriptionController,
-    required this.tags,
-  });
-
-  @override
-  _StepTwoState createState() => _StepTwoState();
-}
-
-class _StepTwoState extends State<StepTwo> {
-  late TextEditingController _tagController;
-  late List<String> tags;
+  List<String> tags = [];
   List<Map<String, TextEditingController>> features = [];
 
   void _addFeatureField() {
@@ -739,14 +513,15 @@ class _StepTwoState extends State<StepTwo> {
   @override
   void initState() {
     super.initState();
+
     _tagController = TextEditingController();
-    tags = List.from(widget.tags);
+    tags = widget.tags;
   }
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-
+    print(tags.length);
     return Column(
       children: [
         const SizedBox(height: 16),
@@ -859,7 +634,7 @@ class _StepTwoState extends State<StepTwo> {
                   setState(() {
                     tags.add(tag);
                   });
-                  widget.addTag(tag);
+                  // widget.addTag(tag);
                   _tagController.clear();
                 }
               },

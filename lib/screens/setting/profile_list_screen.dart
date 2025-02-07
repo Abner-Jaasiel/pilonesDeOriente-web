@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 String getCardType(String cardNumber) {
+  if (cardNumber.isEmpty || cardNumber.length < 6) {
+    return 'unknown';
+  }
   String bin = cardNumber.substring(0, 6);
 
   if (bin.startsWith('4')) {

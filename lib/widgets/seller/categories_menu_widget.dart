@@ -1,6 +1,9 @@
 import 'package:carkett/models/categories_model.dart';
+import 'package:carkett/providers/aggregator_controller.dart';
+import 'package:carkett/providers/product_aggregator_controller.dart';
 import 'package:carkett/services/api_service.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class CategoriesMenuWidget extends StatefulWidget {
   final List<String> categories;
@@ -45,39 +48,48 @@ class _CategoriesMenuWidgetState extends State<CategoriesMenuWidget> {
 
   @override
   Widget build(BuildContext context) {
+    ProductAggregatorController aggregatorController =
+        Provider.of<ProductAggregatorController>(context);
     return categoriesList.isEmpty
         ? const Center(child: CircularProgressIndicator())
-        : SingleChildScrollView(
-            child: ExpansionPanelList.radio(
-              children:
-                  getParentCategories().map<ExpansionPanelRadio>((parent) {
-                final subCategories = getSubCategories(parent.categoryId);
-                return ExpansionPanelRadio(
-                  value: parent.categoryId,
-                  headerBuilder: (context, isExpanded) {
-                    return ListTile(
-                      title: Text(parent.categoryName),
+        : Column(
+            children: [
+              Text(aggregatorController.categoryName),
+              SingleChildScrollView(
+                child: ExpansionPanelList.radio(
+                  children:
+                      getParentCategories().map<ExpansionPanelRadio>((parent) {
+                    final subCategories = getSubCategories(parent.categoryId);
+                    return ExpansionPanelRadio(
+                      value: parent.categoryId,
+                      headerBuilder: (context, isExpanded) {
+                        return ListTile(
+                          title: Text(parent.categoryName),
+                        );
+                      },
+                      body: subCategories.isEmpty
+                          ? const ListTile(title: Text("No subcategories"))
+                          : Column(
+                              children: subCategories.map((sub) {
+                                return ListTile(
+                                  title: Text(sub.categoryName),
+                                  onTap: () {
+                                    widget.addCategory(sub.categoryId);
+                                    aggregatorController.categoryName =
+                                        sub.categoryName;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                            content: Text(
+                                                'Selected: ${sub.categoryName}')));
+                                  },
+                                );
+                              }).toList(),
+                            ),
                     );
-                  },
-                  body: subCategories.isEmpty
-                      ? const ListTile(title: Text("No subcategories"))
-                      : Column(
-                          children: subCategories.map((sub) {
-                            return ListTile(
-                              title: Text(sub.categoryName),
-                              onTap: () {
-                                widget.addCategory(sub.categoryId);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                        content: Text(
-                                            'Selected: ${sub.categoryName}')));
-                              },
-                            );
-                          }).toList(),
-                        ),
-                );
-              }).toList(),
-            ),
+                  }).toList(),
+                ),
+              ),
+            ],
           );
   }
 }

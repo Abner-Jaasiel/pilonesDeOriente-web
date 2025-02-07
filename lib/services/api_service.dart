@@ -17,10 +17,11 @@ class APIService {
   Future<Map<String, dynamic>> getUserWithFirebaseId(String firebaseId) async {
     final response =
         await http.get(Uri.parse("$apiUrl/users/firebase/$firebaseId"));
-    print("USER BY [API]");
+    print("USER BY [API] ");
     try {
       if (response.statusCode == 200) {
-        print(jsonDecode(response.body));
+        print(
+            "🤺🤺😀😀😀😀🤷‍♂️🤣❤️🤣🩸👌👌>   ${jsonDecode(response.body)}   <🤺🤺😀😀😀😀🤷‍♂️🤣❤️🤣🩸👌👌");
         return jsonDecode(response.body);
       } else {
         throw Exception('Error');
@@ -160,21 +161,21 @@ class APIService {
   }*/
   Future<List<dynamic>?> getFilteredProducts(
       Map<String, dynamic> filter) async {
-    if ((filter['category_id'] == null ||
-            filter['category_id'].toString().isEmpty) &&
+    print("Todos los filtros:  ~$filter");
+    if ((filter['category_id'] == null || filter['category_id'] < 0) &&
         (filter['tags'] == null || filter['tags'].isEmpty) &&
         (filter['seller_firebase_uid'] == null ||
             filter['seller_firebase_uid'].toString().isEmpty) &&
         (filter['name'] == null || filter['name'].toString().isEmpty)) {
       print(
-          "Todos los filtros están vacíos. No se realizará ninguna solicitud.");
+          "Todos los filtros están vacíos. No se realizará ninguna solicitud.   ~$filter");
       return [];
     }
 
     final Map<String, dynamic> queryParams = {};
 
-    if (filter['category_id'] != null &&
-        filter['category_id'].toString().isNotEmpty) {
+    if (filter['category_id'] != null && filter['category_id'] != 0) {
+      print("Todos los filtro categprys:  ~$filter");
       queryParams['category_id'] = filter['category_id'].toString();
     }
     if (filter['tags'] != null && filter['tags'].isNotEmpty) {
@@ -196,7 +197,9 @@ class APIService {
       final response = await http.get(uri).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        final List<dynamic> products = jsonDecode(response.body);
+        print(products);
+        return products;
       } else {
         throw Exception('Error al obtener productos filtrados');
       }
@@ -351,7 +354,7 @@ class APIService {
     }
   }
 
-  Future<void> updateUserData(
+  /*Future<void> updateUserData(
       String? name, String? description, String? profileImageUrl) async {
     String? token = await AuthFirebaseService().getIdToken();
     final url = Uri.parse("$apiUrl/users/update");
@@ -366,6 +369,47 @@ class APIService {
         if (name != null) 'name': name,
         if (description != null) 'description': description,
         if (profileImageUrl != null) 'profile_image_url': profileImageUrl,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      print('Update successful');
+    } else {
+      print('Failed to update: ${response.statusCode}');
+    }
+  }*/
+  Future<void> updateUserData(
+    String? name,
+    String? description,
+    String? profileImageUrl,
+    String? legalName,
+    String? idImageUrl,
+    String? identityNumber,
+    String? phoneNumber,
+    String? seller,
+    double? locationLatitude,
+    double? locationLongitude,
+  ) async {
+    String? token = await AuthFirebaseService().getIdToken();
+    final url = Uri.parse("$apiUrl/users/update");
+
+    final response = await http.patch(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        if (name != null) 'name': name,
+        if (description != null) 'description': description,
+        if (profileImageUrl != null) 'profile_image_url': profileImageUrl,
+        if (legalName != null) 'legal_name': legalName,
+        if (idImageUrl != null) 'id_image_url': idImageUrl,
+        if (identityNumber != null) 'identity_number': identityNumber,
+        if (phoneNumber != null) 'phone_number': phoneNumber,
+        if (seller != null) 'seller': seller,
+        if (locationLatitude != null) 'location_latitude': locationLatitude,
+        if (locationLongitude != null) 'location_longitude': locationLongitude,
       }),
     );
 
@@ -529,25 +573,28 @@ class APIService {
     String firebaseUid,
     int id,
     String legalName,
-    double locationLatitude, // Latitud separada
-    double locationLongitude, // Longitud separada
+    double locationLatitude,
+    double locationLongitude,
     String locationDescription,
     String cardNumber,
     String identityNumber,
     int profileIndex,
+    String phoneNumber,
+    bool isDefault,
   ) async {
     print(
         "$locationLatitude   $locationLongitude  😫😫😫😫😫😫😫😫😫😫😫😫😫😫");
-    // Estructuramos los datos del perfil, incluyendo latitud y longitud por separado
+
     final Map<String, dynamic> profileData = {
       'firebaseUid': firebaseUid,
       'legalName': legalName,
-      'locationLatitude': locationLatitude, // Aquí estamos enviando la latitud
-      'locationLongitude':
-          locationLongitude, // Aquí estamos enviando la longitud
+      'locationLatitude': locationLatitude,
+      'locationLongitude': locationLongitude,
       'locationDescription': locationDescription,
       'cardNumber': cardNumber,
       'identityNumber': identityNumber,
+      'phoneNumber': phoneNumber,
+      'isDefault': isDefault,
     };
 
     try {
@@ -764,6 +811,66 @@ class APIService {
     } catch (e) {
       print("Excepción al enviar productos comprados: $e");
       return false;
+    }
+  }
+
+  /*Future<double> convertUSDToCurrency(
+      double amountInUSD, String currencyCode) async {
+    const String url = 'https://open.er-api.com/v6/latest/USD';
+
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        final double rate = data['rates'][currencyCode];
+
+        double amountInTargetCurrency = amountInUSD * rate;
+        return amountInTargetCurrency;
+      } else {
+        throw Exception(
+            'Error al obtener la tasa de cambio: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error de conexión: $e');
+    }
+  }
+
+  Future<double> convertCurrencyToUSD(
+      double amountInTargetCurrency, String currencyCode) async {
+    const String url = 'https://open.er-api.com/v6/latest/USD';
+
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        final double rate = data['rates'][currencyCode];
+
+        double amountInUSD = amountInTargetCurrency / rate;
+        return amountInUSD;
+      } else {
+        throw Exception(
+            'Error al obtener la tasa de cambio: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error de conexión: $e');
+    }
+  }*/
+
+  Future<double> getCurrencyValue(String currencyCode) async {
+    const String url = 'https://open.er-api.com/v6/latest/USD';
+
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        final double rate = data['rates'][currencyCode];
+        return rate;
+      } else {
+        throw Exception(
+            'Error al obtener la tasa de cambio: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error de conexión: $e');
     }
   }
 }

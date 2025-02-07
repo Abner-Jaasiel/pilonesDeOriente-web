@@ -1,9 +1,19 @@
 import 'dart:convert';
 
+import 'dart:typed_data';
+import 'dart:io';
+import 'package:geolocator/geolocator.dart';
+import 'package:image/image.dart' as img;
+import 'package:image_picker/image_picker.dart';
+
 import 'package:carkett/models/user_model.dart';
+import 'package:carkett/providers/appconfig_controller.dart';
 import 'package:carkett/services/api_service.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
@@ -73,7 +83,6 @@ Future<UserModel?> loadExternalUser(
         await APIService().getUserWithFirebaseId(firebaseUid);
 
     UserModel user = UserModel.fromJson(userData);
-
     return user;
   } catch (error) {
     print('Error: $error');
@@ -127,7 +136,7 @@ Future<void> updateUserInPreferences(UserModel data,
   await prefs.setString('user', updatedUserJson);
 }
 
-const String _apiKey = '2bf6df60f4a4438ab4df1492943a718a'; // Tu API Key
+const String _apiKey = '2bf6df60f4a4438ab4df1492943a718a';
 
 Future<String?> getLocationName(LatLng location) async {
   final url =
@@ -143,5 +152,121 @@ Future<String?> getLocationName(LatLng location) async {
     }
   } catch (e) {
     return "Error retrieving location name: $e";
+  }
+}
+/*
+double convertAmountToCurrency(double amount, BuildContext context) {
+  final currencyValue =
+      Provider.of<AppConfigController>(context, listen: false).currencyValue;
+  final currency =
+      Provider.of<AppConfigController>(context, listen: false).currency;
+
+  if (currency == 'USD') {
+    return amount;
+  } else {
+    return amount * currencyValue;
+  }
+}*/
+
+String getFormattedCurrency(double amount, BuildContext context) {
+  final currencyValue =
+      Provider.of<AppConfigController>(context, listen: false).currencyValue;
+  final currency =
+      Provider.of<AppConfigController>(context, listen: false).currency;
+
+  double convertedAmount =
+      (currency == 'USD') ? amount : amount * currencyValue;
+
+  final formatter = NumberFormat('#,##0', 'en_US');
+  String formattedAmount = formatter.format(convertedAmount);
+
+  return '$currency $formattedAmount';
+}
+
+class ImageValidation {
+  static Future<String> validateImage(XFile imageFile) async {
+    File file = File(imageFile.path);
+    List<int> bytes = await file.readAsBytes();
+    img.Image? image = img.decodeImage(Uint8List.fromList(bytes));
+
+    if (image == null) {
+      return "Error al procesar la imagen";
+    }
+
+    if (image.width < 800 || image.height < 600) {
+      return "La imagen es demasiado pequeña. Se requiere una resolución mayor.";
+    }
+
+    double sharpness = _calculateSharpness(image);
+    if (sharpness < 36.0) {
+      return "La imagen está borrosa. Intente cargar una imagen más clara.";
+    }
+
+    return "La imagen es válida";
+  }
+
+  static double _calculateSharpness(img.Image image) {
+    double laplacian = 0.0;
+
+    for (int y = 1; y < image.height - 1; y++) {
+      for (int x = 1; x < image.width - 1; x++) {
+        img.Pixel pixel = image.getPixel(x, y);
+        img.Pixel pixelRight = image.getPixel(x + 1, y);
+        img.Pixel pixelBottom = image.getPixel(x, y + 1);
+
+        int diffRight = _getLuminance(pixelRight) - _getLuminance(pixel);
+        int diffBottom = _getLuminance(pixelBottom) - _getLuminance(pixel);
+
+        laplacian += diffRight * diffRight + diffBottom * diffBottom;
+      }
+    }
+
+    return laplacian / (image.width * image.height);
+  }
+
+  static int _getLuminance(img.Pixel pixel) {
+    int r = pixel.r.toInt();
+    int g = pixel.g.toInt();
+    int b = pixel.b.toInt();
+    return (0.299 * r + 0.587 * g + 0.114 * b).round();
+  }
+}
+
+class LocationService {
+  static Future<Position?> getCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        debugPrint("⚠️ El GPS está desactivado.");
+        return null;
+      }
+
+      // 2️⃣ Verificar permisos
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          debugPrint("❌ Permiso de ubicación denegado.");
+          return null;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        debugPrint("⛔ Permiso de ubicación bloqueado permanentemente.");
+        return null;
+      }
+
+      // 3️⃣ Obtener la ubicación con manejo de errores
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      debugPrint(
+          "📍 Latitud: ${position.latitude}, Longitud: ${position.longitude}");
+      return position;
+    } catch (e) {
+      debugPrint("🚨 Error al obtener ubicación: $e");
+      return null;
+    }
   }
 }

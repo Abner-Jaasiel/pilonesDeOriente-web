@@ -54,10 +54,9 @@ class SearchZoneScreen extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(left: 8.0),
                         child: Chip(
-                          label:
-                              const Text("searchFilterController.categoryName"),
+                          label: Text(searchFilterController.categoryName),
                           onDeleted: () {
-                            // searchFilterController.clearCategory();
+                            searchFilterController.clearCategory();
                           },
                         ),
                       ),
@@ -145,11 +144,11 @@ class SearchZoneScreen extends StatelessWidget {
                                       const Divider(),
                                       ListTile(
                                         onTap: () {
-                                          /* searchFilterController.categoryId =
+                                          searchFilterController.categoryId =
                                               categoriesList[index].categoryId;
                                           searchFilterController.categoryName =
                                               categoriesList[index]
-                                                  .categoryName;*/
+                                                  .categoryName;
                                         },
                                         title: Text(
                                             categoriesList[index].categoryName),

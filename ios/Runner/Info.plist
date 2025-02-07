@@ -56,5 +56,12 @@
         <string>es</string>
 		<string>zh</string>
     </array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We need your location to provide better services.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>We need your location always to provide better services.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>We need your location to function properly.</string>
+
 </dict>
 </plist>
