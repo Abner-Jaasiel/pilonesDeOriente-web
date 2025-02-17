@@ -196,18 +196,9 @@ class ProductCarouselListWithCategoryWidget extends StatelessWidget {
       child: FutureBuilder(
         key: const PageStorageKey<String>('pageStorageKey2'),
         future: APIService().getFilteredProducts({
-          'category_id': categoryId,
-          'tags': null,
-          'seller': null,
-          'name': null,
+          "category_id": categoryId,
         }),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
-          }
-
           if (snapshot.hasError) {
             return Center(
               child: Text('Error: ${snapshot.error}'),
@@ -229,7 +220,7 @@ class ProductCarouselListWithCategoryWidget extends StatelessWidget {
               items.add(product);
             }
             //SearchModel data = SearchModel.fromJson(jsonList);
-            print(items);
+
             return SizedBox(
               height: 340,
               child: ProductCarouselListWidget(
@@ -265,7 +256,7 @@ class ProductCarouselListWithSellerWidget extends StatefulWidget {
 class _ProductCarouselListWithSellerWidgetState
     extends State<ProductCarouselListWithSellerWidget> {
   final APIService apiService = APIService();
-  List<dynamic>? _cachedProducts; // Cache local de los productos
+  List<dynamic>? _cachedProducts;
   late Future<List<dynamic>> _futureProducts;
 
   @override
@@ -284,7 +275,7 @@ class _ProductCarouselListWithSellerWidgetState
         'seller_firebase_uid': widget.seller,
         'name': null,
       });
-      _cachedProducts = products; // Almacena los productos en cache
+      _cachedProducts = products;
       return products!;
     }
   }
@@ -319,13 +310,25 @@ class _ProductCarouselListWithSellerWidgetState
               .map((productData) => ProductCarruselModel.fromJson(productData))
               .toList();
 
-          return SizedBox(
-            height: 340,
-            child: ProductCarouselListWidget(
-              data: items,
-              withIntialSpace: widget.withIntialSpace,
-            ),
-          );
+          List<Widget> carouselWidgets = [];
+          int maxItemsPerCarousel =
+              MediaQuery.of(context).size.width < 600 ? 2 : 5;
+
+          for (int i = 0; i < items.length; i += maxItemsPerCarousel) {
+            var limitedProducts =
+                items.skip(i).take(maxItemsPerCarousel).toList();
+            carouselWidgets.add(
+              SizedBox(
+                height: 340,
+                child: ProductCarouselSellerListWidget(
+                  data: limitedProducts,
+                  withIntialSpace: widget.withIntialSpace,
+                ),
+              ),
+            );
+          }
+
+          return Column(children: carouselWidgets);
         } catch (e) {
           return Center(
             child: Text('Error procesando los datos: $e'),
@@ -377,6 +380,73 @@ class ProductCarouselListWidget extends StatelessWidget {
               rating: product.rating,
               isAvailable: product.onSale,
               borderRadius: 8.0,
+            ),
+          );
+        }
+
+        return const SizedBox();
+      },
+    );
+  }
+}
+
+class ProductCarouselSellerListWidget extends StatelessWidget {
+  const ProductCarouselSellerListWidget(
+      {super.key, required this.data, this.withIntialSpace = false});
+
+  final data;
+  final bool withIntialSpace;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      key: const PageStorageKey<String>('pageStorageKey2'),
+      scrollDirection: Axis.horizontal,
+      itemCount: withIntialSpace ? data.length + 1 : data.length,
+      itemBuilder: (context, index) {
+        if (withIntialSpace && index == 0) {
+          return const SizedBox(width: 180);
+        }
+
+        final productIndex = withIntialSpace ? index - 1 : index;
+
+        if (productIndex >= 0 && productIndex < data.length) {
+          final product = data[productIndex];
+
+          return SizedBox(
+            width: 180,
+            child: Stack(
+              children: [
+                ProductCard(
+                  imageUrl: product.urlImage,
+                  categoryName: product.categoryName ?? 'Category',
+                  productName: product.name,
+                  price: product.price,
+                  onTap: () {
+                    kIsWeb
+                        ? GoRouter.of(context).go('/product/${product.id}')
+                        : GoRouter.of(context).push('/product/${product.id}');
+                  },
+                  rating: product.rating,
+                  isAvailable: product.onSale,
+                  borderRadius: 8.0,
+                ),
+                Positioned(
+                  top: 5,
+                  right: 5,
+                  child: IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.white, size: 20),
+                    onPressed: () {
+                      GoRouter.of(context)
+                          .push('/product_aggregator', extra: product.id);
+                    },
+                    style: ButtonStyle(
+                      backgroundColor: WidgetStateProperty.all(Colors.black54),
+                      shape: WidgetStateProperty.all(const CircleBorder()),
+                    ),
+                  ),
+                ),
+              ],
             ),
           );
         }

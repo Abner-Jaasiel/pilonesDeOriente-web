@@ -118,6 +118,8 @@ class PaymentController with ChangeNotifier {
   double _latitude = 0.0;
   double _longitude = 0.0;
 
+  int _profileId = 0;
+
   final List<String> _productIds = [];
 
   double get amountToPay => _amountToPay;
@@ -133,6 +135,12 @@ class PaymentController with ChangeNotifier {
   double get latitude => _latitude;
   double get longitude => _longitude;
   List<String> get productIds => _productIds;
+  int get profileId => _profileId;
+
+  set profileId(int value) {
+    _profileId = value;
+    notifyListeners();
+  }
 
   void setAmount(double amount) {
     _amountToPay = amount;
@@ -192,9 +200,13 @@ class PaymentController with ChangeNotifier {
     notifyListeners();
   }
 
+  void productIdsClear() {
+    _productIds.clear();
+  }
+
   void addProductId(String productId) {
     _productIds.add(productId);
-    //notifyListeners();
+    notifyListeners();
   }
 
   void removeProductId(String productId) {

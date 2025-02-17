@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:carkett/models/order_user_model.dart';
 import 'package:carkett/models/perfile_model.dart';
+import 'package:carkett/models/product_model.dart';
 import 'package:carkett/services/auth_firebase_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -290,7 +292,37 @@ class APIService {
     }
   }*/
 
-  Future<List<dynamic>> fetchCartItems(String firebaseId,
+  Future<List<dynamic>> fetchCartItems(String firebaseId) async {
+    String? token = await AuthFirebaseService().getIdToken();
+
+    try {
+      final response = await http.get(
+        Uri.parse("$apiUrl/products/cart?uid=$firebaseId"),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        var decodedResponse = jsonDecode(response.body);
+
+        if (decodedResponse is List) {
+          return decodedResponse.isEmpty ? [] : decodedResponse;
+        } else if (decodedResponse is Map && decodedResponse['items'] is List) {
+          return decodedResponse['items'] ?? [];
+        } else {
+          throw Exception('Unexpected response format');
+        }
+      } else {
+        throw Exception('Error: ${response.statusCode}');
+      }
+    } catch (error) {
+      throw Exception('Error: $error');
+    }
+  }
+
+  /* Future<List<dynamic>> fetchCartItems(String firebaseId,
       {String status = 'pending'}) async {
     String? token = await AuthFirebaseService().getIdToken();
 
@@ -319,7 +351,7 @@ class APIService {
     } catch (error) {
       throw Exception('Error: $error');
     }
-  }
+  }*/
 
   Future<bool> removeCartItem(String firebaseId, String productId) async {
     String? token = await AuthFirebaseService().getIdToken();
@@ -420,7 +452,7 @@ class APIService {
     }
   }
 
-  Future<void> insertCommentToProduct(
+  Future<CommentModel> insertCommentToProduct(
     String productId,
     User user,
     String comment,
@@ -434,14 +466,18 @@ class APIService {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
-      body: jsonEncode(
-          {'productId': productId, 'userId': user.uid, 'comment': comment}),
+      body: jsonEncode({
+        'productId': productId,
+        'userId': user.uid,
+        'comment': comment,
+      }),
     );
 
     if (response.statusCode == 200) {
-      print('full');
+      final commentData = jsonDecode(response.body);
+      return CommentModel.fromJson(commentData); // Ahora recibe todos los datos
     } else {
-      print('Failed: ${response.statusCode}');
+      throw Exception('Failed to insert comment: ${response.statusCode}');
     }
   }
 
@@ -582,8 +618,7 @@ class APIService {
     String phoneNumber,
     bool isDefault,
   ) async {
-    print(
-        "$locationLatitude   $locationLongitude  😫😫😫😫😫😫😫😫😫😫😫😫😫😫");
+    print("$locationLatitude   $firebaseUid  😫😫😫😫😫😫😫😫😫😫😫😫😫😫");
 
     final Map<String, dynamic> profileData = {
       'firebaseUid': firebaseUid,
@@ -731,9 +766,79 @@ class APIService {
       return false;
     }
   }*/
+  /*Future<bool> uploadPurchasedProducts({
+    required List<String> productIds,
+    required String legalName,
+    required String location,
+    required int userId,
+    required String locationDescription,
+    required String provider,
+    required String identityId,
+    required String cardNumber,
+    required double amountToPay,
+    required double subtotal,
+    required double shipping,
+    required double lat,
+    required double long,
+    required String firebaseUid,
+    required String paymentToken,
+  }) async {
+    try {
+      final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
+      print("$productIds  ℹ️ℹ️ℹ️ℹ️ℹ️ℹ️ℹ️ℹ️ℹ️ℹ️ℹ️ℹ️ℹ️ℹ️ℹ️🩸🩸");
+      if (idToken == null) {
+        print("Error: No se pudo obtener el token de autenticación.");
+        return false;
+      }
 
+      final purchasedProductsJson = {
+        "firebaseUid": firebaseUid,
+        "products": productIds.map((id) {
+          return {
+            "product_id": id, // Aquí debería ser "product_id"
+          };
+        }).toList(),
+        "summary": {
+          "amountToPay": amountToPay,
+          "subtotal": subtotal,
+          "shipping": shipping,
+        },
+        "paymentToken": paymentToken,
+      };
+
+      final response = await http.post(
+        Uri.parse("$apiUrl/insert-purchased-product"),
+        headers: {
+          'Authorization': 'Bearer $idToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(purchasedProductsJson),
+      );
+
+      if (response.statusCode == 200) {
+        final responseJson = jsonDecode(response.body);
+
+        if (responseJson['status'] == 'success' &&
+            responseJson['isValid'] == true) {
+          print("Respuesta del servidor: ${responseJson['message']}");
+          return true;
+        } else {
+          print("Error: ${responseJson['message']}");
+          return false;
+        }
+      } else {
+        print("Error al enviar productos comprados: ${response.statusCode}");
+        print("Mensaje del servidor: ${response.body}");
+        return false;
+      }
+    } catch (e) {
+      print("Excepción al enviar productos comprados: $e");
+      return false;
+    }
+  }*/
   Future<bool> uploadPurchasedProducts({
     required List<String> productIds,
+    required int profileId,
     required String legalName,
     required String location,
     required int userId,
@@ -776,6 +881,7 @@ class APIService {
           };
         }).toList(),
         "summary": {
+          "profileId": profileId,
           "amountToPay": amountToPay,
           "subtotal": subtotal,
           "shipping": shipping,
@@ -871,6 +977,57 @@ class APIService {
       }
     } catch (e) {
       throw Exception('Error de conexión: $e');
+    }
+  }
+
+  Future<bool> deleteCommentFromProduct(int commentId) async {
+    String? token = await AuthFirebaseService().getIdToken();
+    final url = Uri.parse("$apiUrl/products/comment/$commentId");
+
+    try {
+      final response = await http.delete(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        print('Comentario eliminado correctamente');
+        return true;
+      } else {
+        print('Error al eliminar comentario: ${response.statusCode}');
+        return false;
+      }
+    } catch (error) {
+      print('Error al intentar eliminar el comentario: $error');
+      return false;
+    }
+  }
+
+  Future<List<OrderUserModel>> getUserOrders(String firebaseUid) async {
+    String? token = await AuthFirebaseService().getIdToken();
+    final String url = '$apiUrl/orders/$firebaseUid';
+
+    try {
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+
+        return data.map((order) => OrderUserModel.fromJson(order)).toList();
+      } else {
+        throw Exception('Error al obtener las órdenes: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error al conectarse al servidor: $e');
     }
   }
 }

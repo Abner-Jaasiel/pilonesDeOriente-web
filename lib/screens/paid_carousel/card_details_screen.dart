@@ -157,6 +157,7 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
                       firebaseUid = user.uid;
                       final bool result = await APIService()
                           .uploadPurchasedProducts(
+                              profileId: paymentController.profileId,
                               legalName: paymentController.legalName,
                               location: paymentController.location,
                               userId: paymentController.userId,

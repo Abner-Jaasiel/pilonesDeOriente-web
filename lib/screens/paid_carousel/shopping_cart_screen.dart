@@ -225,8 +225,7 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
     User? user = FirebaseAuth.instance.currentUser;
 
     if (user != null) {
-      final fetchedCartItems =
-          await APIService().fetchCartItems(user.uid, status: 'pending');
+      final fetchedCartItems = await APIService().fetchCartItems(user.uid);
 
       if (mounted) {
         setState(() {
@@ -254,9 +253,6 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
         Provider.of<PaymentController>(context);
     double subtotal = _calculateSubtotal();
     paymentController.setSubtotal(subtotal);
-    for (var item in cartItems) {
-      paymentController.addProductId(item.productId);
-    }
 
     return Scaffold(
       appBar: AppBar(
@@ -293,9 +289,11 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
                               setState(() => cartItems.removeAt(index));
                             },
                             child: InkWell(
-                              onTap: () => GoRouter.of(context).push(
-                                '/product/${cartItems[index].productId}',
-                              ),
+                              onTap: () {
+                                GoRouter.of(context).push(
+                                  '/product/${cartItems[index].productId}',
+                                );
+                              },
                               child: Card(
                                 elevation: 1,
                                 margin: const EdgeInsets.symmetric(
@@ -361,6 +359,11 @@ class _ShoppingCartScreenState extends State<ShoppingCartScreen> {
                           const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: () {
+                              paymentController.productIdsClear();
+                              for (var item in cartItems) {
+                                paymentController.addProductId(item.productId);
+                              }
+
                               GoRouter.of(context).push('/profile_selection');
                             },
                             child: Text(S.current.buy),

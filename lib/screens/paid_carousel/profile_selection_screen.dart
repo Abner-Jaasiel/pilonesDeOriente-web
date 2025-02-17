@@ -167,7 +167,7 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
 
                               paymentController.legalName =
                                   selectedProfile.legalName;
-
+                              paymentController.profileId = selectedProfile.id;
                               paymentController.locationDescription =
                                   selectedProfile.locationDescription;
                               paymentController.userId = selectedProfile.userId;
@@ -234,7 +234,7 @@ class _ProfileSelectionScreenState extends State<ProfileSelectionScreen> {
 }
 
 String getCardType(String cardNumber) {
-  String bin = cardNumber.substring(0, 6);
+  String bin = cardNumber.length >= 6 ? cardNumber.substring(0, 6) : cardNumber;
 
   if (bin.startsWith('4')) {
     return 'visa';

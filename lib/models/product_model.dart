@@ -4,7 +4,8 @@ class CommentModel {
   final String userId;
   final String comment;
   final String userNameComment;
-  final String? userProfileImage;
+  final String? userProfileImage; // Es opcional, puede ser null
+  final DateTime createdAt;
 
   CommentModel({
     required this.id,
@@ -12,7 +13,8 @@ class CommentModel {
     required this.userId,
     required this.comment,
     required this.userNameComment,
-    this.userProfileImage,
+    this.userProfileImage, // Puede ser null
+    required this.createdAt,
   });
 
   factory CommentModel.fromJson(Map<String, dynamic> json) {
@@ -21,8 +23,12 @@ class CommentModel {
       productId: json['product_id'],
       userId: json['user_id'],
       comment: json['comment'],
-      userNameComment: json['user_name_comment'] ?? '',
-      userProfileImage: json['user_profile_image'],
+      userNameComment: json['user_name_comment'] ?? '', // Manejar null
+      userProfileImage: json['user_profile_image']
+          as String?, // Convertir a String? para que acepte null
+      createdAt: DateTime.parse(json['created_at'] ??
+          DateTime.now()
+              .toIso8601String()), // Default a la fecha actual si no se encuentra
     );
   }
 
@@ -33,7 +39,8 @@ class CommentModel {
       'user_id': userId,
       'comment': comment,
       'user_name_comment': userNameComment,
-      'user_profile_image': userProfileImage,
+      'user_profile_image': userProfileImage, // Puede ser null
+      'created_at': createdAt.toIso8601String(), // Convertir a formato ISO 8601
     };
   }
 }
@@ -51,6 +58,8 @@ class ProductModel {
   final int? stock;
   final String categoryName;
   final int categoryId;
+  final String? subcategoryName; // Nuevo campo
+  final int? subcategoryId; // Nuevo campo
   final bool onSale;
   final double? discountPrice;
   final String sellerfirebaseUid;
@@ -58,7 +67,7 @@ class ProductModel {
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<String> tags;
-  final List<CommentModel> comments;
+  List<CommentModel> comments;
 
   ProductModel({
     required this.id,
@@ -73,6 +82,8 @@ class ProductModel {
     required this.stock,
     required this.categoryName,
     required this.categoryId,
+    this.subcategoryName, // Inicialización del nuevo campo
+    this.subcategoryId, // Inicialización del nuevo campo
     required this.onSale,
     this.discountPrice,
     required this.sellerfirebaseUid,
@@ -103,6 +114,8 @@ class ProductModel {
       stock: json['stock'],
       categoryName: json['category_name'],
       categoryId: json['category_id'],
+      subcategoryName: json['subcategory_name'], // Asignación del nuevo campo
+      subcategoryId: json['subcategory_id'], // Asignación del nuevo campo
       onSale: json['onsale'],
       discountPrice: json['discountprice'] != null
           ? double.parse(json['discountprice'])
@@ -132,6 +145,8 @@ class ProductModel {
       'stock': stock,
       'category_name': categoryName,
       'category_id': categoryId,
+      'subcategory_name': subcategoryName,
+      'subcategory_id': subcategoryId,
       'onsale': onSale,
       'discountprice': discountPrice,
       'seller_firebase_uid': sellerfirebaseUid,

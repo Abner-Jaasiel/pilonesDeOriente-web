@@ -52,16 +52,27 @@ class ImagesForSelectWidget extends StatelessWidget {
           scrollDirection: Axis.horizontal,
           itemCount: urlImage.length,
           itemBuilder: (context, index) {
-            final Container buttonImage = Container(
-              margin: const EdgeInsets.all(5),
-              decoration: const BoxDecoration(
-                borderRadius: BorderRadius.all(Radius.circular(15)),
-              ),
-              clipBehavior: Clip.hardEdge,
-              child: CachedNetworkImage(
-                imageUrl: urlImage[index],
-                width: 50,
-                errorWidget: (context, url, error) => const Icon(Icons.error),
+            final GestureDetector buttonImage = GestureDetector(
+              onTap: () {
+                context.push(
+                  '/image_viewer',
+                  extra: {
+                    'imageUrls': urlImage,
+                    'initialIndex': index,
+                  },
+                );
+              },
+              child: Container(
+                margin: const EdgeInsets.all(5),
+                decoration: const BoxDecoration(
+                  borderRadius: BorderRadius.all(Radius.circular(15)),
+                ),
+                clipBehavior: Clip.hardEdge,
+                child: CachedNetworkImage(
+                  imageUrl: urlImage[index],
+                  width: 50,
+                  errorWidget: (context, url, error) => const Icon(Icons.error),
+                ),
               ),
             );
 

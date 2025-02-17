@@ -5,7 +5,7 @@ class CartItemModel {
   double price;
   int quantity;
   String imageUrl;
-  String status;
+  String? orderId; // Hacer que el orderId sea nullable
 
   CartItemModel({
     required this.id,
@@ -14,7 +14,7 @@ class CartItemModel {
     required this.price,
     required this.quantity,
     required this.imageUrl,
-    required this.status,
+    this.orderId,
   });
 
   factory CartItemModel.fromMap(Map<String, dynamic> map) {
@@ -25,7 +25,7 @@ class CartItemModel {
       price: double.parse(map['price'].toString()),
       quantity: map['quantity'],
       imageUrl: map['imageurl'],
-      status: map['status'] ?? 'pending',
+      orderId: map['order_id'],
     );
   }
 
@@ -41,7 +41,7 @@ class CartItemModel {
       'price': price,
       'quantity': quantity,
       'imageurl': imageUrl,
-      'status': status,
+      'order_id': orderId, // El orderId ahora puede ser nulo
     };
   }
 }

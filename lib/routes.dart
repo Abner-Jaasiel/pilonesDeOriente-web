@@ -16,6 +16,7 @@ import 'package:carkett/screens/product_zone/product_screen.dart';
 import 'package:carkett/screens/seller/create_store_screen.dart';
 import 'package:carkett/screens/seller/html_page_screen.dart';
 import 'package:carkett/screens/seller/product_aggregator_screen.dart';
+import 'package:carkett/screens/seller/provider_dashboard_screen.dart';
 import 'package:carkett/screens/seller/seller_selection_screen.dart';
 import 'package:carkett/screens/setting/edit_profile_screen.dart';
 import 'package:carkett/screens/setting/language_screen.dart';
@@ -102,7 +103,10 @@ final GoRouter router = GoRouter(
     ),
     GoRoute(
       path: '/product_aggregator',
-      builder: (context, state) => const ProductAggregatorScreen(),
+      builder: (context, state) {
+        final productId = state.extra as String?; // Recibe el ID opcionalmente
+        return ProductAggregatorScreen(productId: productId);
+      },
     ),
     GoRoute(
       path: '/seller_management',
@@ -162,7 +166,7 @@ final GoRouter router = GoRouter(
     ),
     GoRoute(
       path: '/orders',
-      builder: (context, state) => const OrdersScreen(),
+      builder: (context, state) => OrdersScreen(),
     ),
     GoRoute(
       path: '/create_store',
@@ -200,6 +204,10 @@ final GoRouter router = GoRouter(
     GoRoute(
       path: '/profile_selection',
       builder: (context, state) => const ProfileSelectionScreen(),
+    ),
+    GoRoute(
+      path: '/provider_dashboard',
+      builder: (context, state) => const ProviderDashboardScreen(),
     ),
     GoRoute(
       path: '/login_seller',

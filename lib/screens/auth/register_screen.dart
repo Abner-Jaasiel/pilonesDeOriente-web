@@ -1,4 +1,5 @@
 import 'package:carkett/generated/l10n.dart';
+import 'package:carkett/widgets/super_progressindicator_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:carkett/providers/register_data_controller.dart';
@@ -201,6 +202,7 @@ class RegisterScreen extends StatelessWidget {
     final name = registerData.name;
 
     try {
+      superProgressIndicator(context);
       await auth.registerWithEmailAndPassword(password, email, name);
       final User? user = FirebaseAuth.instance.currentUser;
       if (user != null) {

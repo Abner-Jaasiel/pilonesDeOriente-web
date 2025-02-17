@@ -6,12 +6,12 @@ import 'package:carkett/providers/product_aggregator_controller.dart';
 import 'package:carkett/screens/product_zone/product_screen.dart';
 import 'package:carkett/services/api_service.dart';
 import 'package:carkett/services/file_service.dart';
+import 'package:carkett/utils/utils.dart';
 import 'package:carkett/widgets/custom_textfield_widget.dart';
 import 'package:carkett/widgets/seller/categories_menu_widget.dart';
 import 'package:carkett/widgets/super_progressindicator_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
@@ -21,8 +21,7 @@ import 'package:markdown_editor_plus/markdown_editor_plus.dart';
 class ProductAggregatorScreen extends StatefulWidget {
   final String? productId;
 
-  const ProductAggregatorScreen(
-      {super.key, this.productId = "da09d3e5-b6b2-464f-8113-73d2d1fbfd47"});
+  const ProductAggregatorScreen({super.key, this.productId});
 
   @override
   _ProductAggregatorScreenState createState() =>
@@ -35,10 +34,9 @@ class _ProductAggregatorScreenState extends State<ProductAggregatorScreen> {
   final TextEditingController _priceController =
       TextEditingController(text: "0");
   final List<String> _tags = [];
-  ProductModel? _product;
-  bool _isLoading = false;
   int _categoryId = 0;
   int _currentStep = 0;
+  List<String> urlImage = [];
 
   @override
   void initState() {
@@ -49,29 +47,30 @@ class _ProductAggregatorScreenState extends State<ProductAggregatorScreen> {
   }
 
   Future<void> _loadProduct() async {
-    setState(() {
-      _isLoading = true;
-    });
-
     try {
       ProductAggregatorController productAggregatorController =
           Provider.of<ProductAggregatorController>(context, listen: false);
+      productAggregatorController.productId = widget.productId!;
       LocationController locationController =
           Provider.of<LocationController>(context, listen: false);
       final data = await APIService().fetchProduct(widget.productId!);
       final product = ProductModel.fromJson(data);
+      urlImage = product.urlImage;
 
-      setState(() {
-        _product = product;
+      setState(() async {
         _nameController.text = product.name;
         _descriptionController.text = product.description;
         _priceController.text = product.price.toString();
         _tags.addAll(product.tags);
+        print("${product.locationLatitude} 🤺 ${product.locationLongitude}");
         if (product.locationLatitude != null &&
             product.locationLongitude != null) {
           locationController.setLocation(
               LatLng(product.locationLatitude!, product.locationLongitude!));
+          locationController.setLocationName(await getLocationName(
+              LatLng(product.locationLatitude!, product.locationLongitude!)));
         }
+
         productAggregatorController.categoryName = product.categoryName;
         _categoryId = product.categoryId;
 
@@ -91,9 +90,7 @@ class _ProductAggregatorScreenState extends State<ProductAggregatorScreen> {
         ),
       );*/
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() {});
     }
   }
 
@@ -129,6 +126,123 @@ class _ProductAggregatorScreenState extends State<ProductAggregatorScreen> {
 
   void _submitProduct() async {
     LocationController locationController =
+        Provider.of<LocationController>(context, listen: false);
+
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final List<String> urlImage = [];
+
+      Map<String, dynamic> data = {
+        "name": _nameController.text,
+        "description": _descriptionController.text,
+        "seller_firebase_uid": user.uid,
+        "location_latitude": locationController.locationLat,
+        "location_longitude": locationController.locationLng,
+        "stock": null,
+        "price": double.tryParse(_priceController.text) ?? 0,
+        "tags": _tags,
+        "category_id": _categoryId,
+        "color": ""
+      };
+
+      if (widget.productId != null) {
+        data["id"] = widget.productId;
+      }
+
+      List<String> missingFields = [];
+      if (data["name"].isEmpty) missingFields.add("Nombre");
+      if (data["description"].isEmpty) missingFields.add("Descripción");
+      if (data["location_latitude"] == 0) missingFields.add("Location_lat");
+      if (data["location_longitude"] == 0) missingFields.add("Location_long");
+      if (data["price"] == 0) missingFields.add("Precio");
+      if (data["tags"].isEmpty) missingFields.add("Etiquetas");
+      if (data["category_id"] == null) missingFields.add("Categoría");
+
+      if (missingFields.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "Faltan los siguientes campos: ${missingFields.join(', ')}",
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      superProgressIndicator(
+          context); //esta funcion permita eque se visualize la pantalla de carga
+      APIService apiService = APIService();
+      final bool isUpdating = widget.productId != null;
+
+      // Enviar datos al servidor
+      final Map<String, dynamic>? productResponse =
+          await apiService.sendProductToServer(
+        data,
+        route: isUpdating ? "/update" : "/",
+        method: isUpdating ? "PATCH" : "POST",
+      );
+
+      if (productResponse != null) {
+        ProductAggregatorController productAggregatorController =
+            Provider.of<ProductAggregatorController>(context, listen: false);
+        final idProduct = productResponse["productId"] ?? widget.productId;
+
+        // Subir imágenes si hay nuevas imágenes seleccionadas
+        /*if (productAggregatorController.pickedFile.isNotEmpty) {
+          for (var file in productAggregatorController.pickedFile) {
+            final String? imageUploaded =
+                await uploadProductImageFirebase(file, idProduct); //este comprime las imagenes y hace que la carga de la pantalla desaparez y se temrina congenlando, aunque al final simepre sigue, lo que queiro es que no suceda eso
+            if (imageUploaded != null) {
+              urlImage.add(imageUploaded);
+            }
+          }
+
+          // Actualizar imágenes en el servidor si hay nuevas
+          if (urlImage.isNotEmpty) {
+            await apiService.sendProductToServer(
+              {"urlimage": urlImage, "id": idProduct},
+              route: "/updateImage",
+              method: "PATCH",
+            );
+          }
+        }*/
+        if (productAggregatorController.pickedFile.isNotEmpty) {
+          Future.delayed(Duration.zero, () async {
+            final List<String> urlImage = [];
+
+            for (var file in productAggregatorController.pickedFile) {
+              final String? imageUploaded =
+                  await uploadProductImageFirebase(file, idProduct);
+              if (imageUploaded != null) {
+                urlImage.add(imageUploaded);
+              }
+            }
+
+            if (urlImage.isNotEmpty) {
+              await apiService.sendProductToServer(
+                {"urlimage": urlImage, "id": idProduct},
+                route: "/updateImage",
+                method: "PATCH",
+              );
+            }
+          });
+        }
+
+        // Resetear formularios después de enviar
+        Navigator.of(context).pop();
+        _nameController.clear();
+        _descriptionController.clear();
+        _priceController.clear();
+        urlImage.clear();
+        _tags.clear();
+
+        setState(() {
+          _currentStep--;
+        });
+      }
+    }
+
+    /* LocationController locationController =
         Provider.of<LocationController>(context, listen: false);
 
     User? user = FirebaseAuth.instance.currentUser;
@@ -213,7 +327,7 @@ class _ProductAggregatorScreenState extends State<ProductAggregatorScreen> {
           _currentStep--;
         });
       }
-    }
+    }*/
   }
 
   @override
@@ -253,6 +367,7 @@ class _ProductAggregatorScreenState extends State<ProductAggregatorScreen> {
             priceController: _priceController,
             incrementPrice: _incrementPrice,
             decrementPrice: _decrementPrice,
+            urlImage: urlImage,
           ),
         ),
         Step(
@@ -277,6 +392,8 @@ class _ProductAggregatorScreenState extends State<ProductAggregatorScreen> {
 
     return LayoutBuilder(builder: (context, constrains) {
       bool sizeScreen = constrains.maxWidth > 1000;
+      ProductAggregatorController productAggregatorController =
+          Provider.of<ProductAggregatorController>(context, listen: false);
       return sizeScreen
           ? Container(
               color: Theme.of(context).scaffoldBackgroundColor,
@@ -284,7 +401,9 @@ class _ProductAggregatorScreenState extends State<ProductAggregatorScreen> {
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  SizedBox(width: 600, child: Scaffold(body: stepper)),
+                  SizedBox(
+                      width: 700,
+                      child: Scaffold(appBar: AppBar(), body: stepper)),
                   Stack(
                     alignment: Alignment.center,
                     children: [
@@ -292,19 +411,20 @@ class _ProductAggregatorScreenState extends State<ProductAggregatorScreen> {
                         width: 340,
                         child: Image.asset("assets/images/smartphone.png"),
                       ),
-                      const SizedBox(
-                        width: 300,
-                        height: 600,
-                        child: ProductScreen(
-                          productId: "98528a49-514d-4c76-b7d8-c32a164852a6",
+                      if (widget.productId != null)
+                        SizedBox(
+                          width: 300,
+                          height: 600,
+                          child: ProductScreen(
+                            productId: productAggregatorController.productId,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ],
               ),
             )
-          : SafeArea(child: stepper);
+          : Material(child: stepper);
     });
   }
 }
@@ -314,14 +434,15 @@ class StepOne extends StatelessWidget {
   final TextEditingController priceController;
   final VoidCallback incrementPrice;
   final VoidCallback decrementPrice;
+  final List<String>? urlImage;
 
-  const StepOne({
-    super.key,
-    required this.nameController,
-    required this.priceController,
-    required this.incrementPrice,
-    required this.decrementPrice,
-  });
+  const StepOne(
+      {super.key,
+      required this.nameController,
+      required this.priceController,
+      required this.incrementPrice,
+      required this.decrementPrice,
+      required this.urlImage});
 
   @override
   Widget build(BuildContext context) {
@@ -341,6 +462,7 @@ class StepOne extends StatelessWidget {
       }
     }
 
+    print("$urlImage🤣s🤣🤣🤣🤣");
     return Column(
       children: [
         InkWell(
@@ -380,14 +502,30 @@ class StepOne extends StatelessWidget {
                         ),
                       ],
                     )
-                  : Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.add_a_photo),
-                        const SizedBox(height: 10),
-                        Text(S.current.addAPhoto),
-                      ],
-                    ),
+                  : urlImage!.isNotEmpty
+                      ? ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: urlImage!.length,
+                          itemBuilder: (context, index) {
+                            return Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Image.network(
+                                urlImage![index],
+                                height: 180,
+                                width: 180,
+                                fit: BoxFit.cover,
+                              ),
+                            );
+                          },
+                        )
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.add_a_photo),
+                            const SizedBox(height: 10),
+                            Text(S.current.addAPhoto),
+                          ],
+                        ),
             ),
           ),
         ),

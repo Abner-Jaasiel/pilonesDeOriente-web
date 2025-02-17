@@ -84,37 +84,8 @@ class SearchZoneScreen extends StatelessWidget {
 
                   return ListView(
                     children: [
-                      Container(
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 30, vertical: 10),
-                        height: 60,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.devices),
-                              onPressed: () {},
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.kitchen),
-                              onPressed: () {},
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.checkroom),
-                              onPressed: () {},
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.health_and_safety),
-                              onPressed: () {},
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.directions_car),
-                              onPressed: () {},
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (searchFilterController.name.isEmpty)
+                      if (searchFilterController.name.isEmpty &&
+                          searchFilterController.categoryId == 0)
                         FutureBuilder(
                           future: APIService().fetchCategories(15),
                           builder: (context, snapshot) {
@@ -134,28 +105,109 @@ class SearchZoneScreen extends StatelessWidget {
                             return Padding(
                               padding:
                                   const EdgeInsets.only(left: 35, right: 15),
-                              child: ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: categoriesList.length,
-                                itemBuilder: (context, index) {
-                                  return Column(
-                                    children: [
-                                      const Divider(),
-                                      ListTile(
-                                        onTap: () {
-                                          searchFilterController.categoryId =
-                                              categoriesList[index].categoryId;
-                                          searchFilterController.categoryName =
-                                              categoriesList[index]
-                                                  .categoryName;
-                                        },
-                                        title: Text(
-                                            categoriesList[index].categoryName),
-                                      ),
-                                    ],
-                                  );
-                                },
+                              child: Column(
+                                children: [
+                                  Container(
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 30, vertical: 10),
+                                    height: 60,
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceEvenly,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.devices),
+                                          onPressed: () {
+                                            const newCategoryId = 1;
+                                            searchFilterController.categoryId =
+                                                newCategoryId;
+                                            searchFilterController
+                                                .categoryName = categoriesList[
+                                                    newCategoryId - 1]
+                                                .categoryName;
+                                          },
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.kitchen),
+                                          onPressed: () {
+                                            const newCategoryId = 2;
+                                            searchFilterController.categoryId =
+                                                newCategoryId;
+                                            searchFilterController
+                                                .categoryName = categoriesList[
+                                                    newCategoryId - 1]
+                                                .categoryName;
+                                          },
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.checkroom),
+                                          onPressed: () {
+                                            const newCategoryId = 3;
+                                            searchFilterController.categoryId =
+                                                newCategoryId;
+                                            searchFilterController
+                                                .categoryName = categoriesList[
+                                                    newCategoryId - 1]
+                                                .categoryName;
+                                          },
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                              Icons.health_and_safety),
+                                          onPressed: () {
+                                            const newCategoryId = 5;
+                                            searchFilterController.categoryId =
+                                                newCategoryId;
+                                            searchFilterController
+                                                .categoryName = categoriesList[
+                                                    newCategoryId - 1]
+                                                .categoryName;
+                                          },
+                                        ),
+                                        IconButton(
+                                          icon:
+                                              const Icon(Icons.directions_car),
+                                          onPressed: () {
+                                            const newCategoryId = 8;
+                                            searchFilterController.categoryId =
+                                                newCategoryId;
+                                            searchFilterController
+                                                .categoryName = categoriesList[
+                                                    newCategoryId - 1]
+                                                .categoryName;
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  ListView.builder(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    itemCount: categoriesList.length,
+                                    itemBuilder: (context, index) {
+                                      return Column(
+                                        children: [
+                                          const Divider(),
+                                          ListTile(
+                                            onTap: () {
+                                              searchFilterController
+                                                      .categoryId =
+                                                  categoriesList[index]
+                                                      .categoryId;
+                                              searchFilterController
+                                                      .categoryName =
+                                                  categoriesList[index]
+                                                      .categoryName;
+                                            },
+                                            title: Text(categoriesList[index]
+                                                .categoryName),
+                                          ),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                ],
                               ),
                             );
                           },

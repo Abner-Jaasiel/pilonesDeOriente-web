@@ -52,6 +52,7 @@ class _ProductScreenState extends State<ProductScreen> {
     super.dispose();
   }
 
+  double quantity = 1;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -84,84 +85,114 @@ class _ProductScreenState extends State<ProductScreen> {
               child: CustomAppBarBlur(),
             )
           : null,
-      body: PageStorage(
-        bucket: bucketGlobal,
-        child: Column(
-          children: [
-            PageStorage(
-              bucket: bucketGlobal,
-              child: Expanded(
-                child: product == null
-                    ? FutureBuilder<Map<String, dynamic>>(
-                        future: data,
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Center(
-                                child: CircularProgressIndicator());
-                          } else if (snapshot.hasError) {
-                            return Center(
-                                child: Text('Error: ${snapshot.error}'));
-                          } else if (snapshot.hasData) {
-                            product = ProductModel.fromJson(snapshot.data!);
-                            return buildProductContent(product!);
-                          } else {
-                            return Center(child: Text(S.current.noData));
-                          }
+      body: Column(
+        children: [
+          PageStorage(
+            bucket: bucketGlobal,
+            child: Expanded(
+              child: product == null
+                  ? FutureBuilder<Map<String, dynamic>>(
+                      future: data,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        } else if (snapshot.hasError) {
+                          return Center(
+                              child: Text('Error: ${snapshot.error}'));
+                        } else if (snapshot.hasData) {
+                          product = ProductModel.fromJson(snapshot.data!);
+                          return buildProductContent(product!);
+                        } else {
+                          return Center(child: Text(S.current.noData));
+                        }
+                      },
+                    )
+                  : buildProductContent(product!),
+            ),
+          ),
+          Center(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 7),
+              width: MediaQuery.of(context).size.width,
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove),
+                        onPressed: () {
+                          setState(() {
+                            if (quantity > 1) quantity--;
+                          });
                         },
-                      )
-                    : buildProductContent(product!),
+                      ),
+                      Text(
+                        '$quantity',
+                        //  style: Theme.of(context).textTheme.headline6,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add),
+                        onPressed: () {
+                          setState(() {
+                            quantity++;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  ElevatedButton(
+                    onPressed: isAddingToCart
+                        ? null
+                        : () async {
+                            setState(() {
+                              isAddingToCart = true;
+                            });
+                            await APIService().sendProductToServer(
+                              {
+                                "productId": widget.productId,
+                                "quantity": quantity
+                              },
+                              route: "/cart",
+                            );
+                            setState(() {
+                              isAddingToCart = false;
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                backgroundColor: Theme.of(context)
+                                    .scaffoldBackgroundColor
+                                    .withBlue(35)
+                                    .withGreen(35)
+                                    .withRed(35),
+                                elevation: 4,
+                                content: Row(
+                                  children: [
+                                    Text(S.current.productAddedToCart,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium),
+                                    TextButton(
+                                        onPressed: () {
+                                          GoRouter.of(context)
+                                              .push("/shopping_cart");
+                                        },
+                                        child: Text(S.current.viewCart))
+                                  ],
+                                )));
+                          },
+                    child: isAddingToCart
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Text(S.current.addToCart),
+                  ),
+                ],
               ),
             ),
-            Center(
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 7),
-                width: MediaQuery.of(context).size.width,
-                constraints: const BoxConstraints(maxWidth: 600),
-                child: ElevatedButton(
-                  onPressed: isAddingToCart
-                      ? null
-                      : () async {
-                          setState(() {
-                            isAddingToCart = true;
-                          });
-                          await APIService().sendProductToServer(
-                            {"productId": widget.productId, "quantity": 1},
-                            route: "/cart",
-                          );
-                          setState(() {
-                            isAddingToCart = false;
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              backgroundColor: Theme.of(context)
-                                  .scaffoldBackgroundColor
-                                  .withBlue(35)
-                                  .withGreen(35)
-                                  .withRed(35),
-                              elevation: 4,
-                              content: Row(
-                                children: [
-                                  Text(S.current.productAddedToCart,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium),
-                                  TextButton(
-                                      onPressed: () {
-                                        GoRouter.of(context)
-                                            .push("/shopping_cart");
-                                      },
-                                      child: Text(S.current.viewCart))
-                                ],
-                              )));
-                        },
-                  child: isAddingToCart
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : Text(S.current.addToCart),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -209,9 +240,7 @@ class _ProductScreenState extends State<ProductScreen> {
             style: Theme.of(context).textTheme.titleLarge),
         const Divider(),
         const SizedBox(height: 30),
-        ProductCarouselListWithCategoryWidget(
-          categoryId: product.categoryId,
-        ),
+
         const SizedBox(height: 20),
 
         //? Seller widget:
@@ -229,8 +258,8 @@ class _ProductScreenState extends State<ProductScreen> {
               alignment: Alignment.center,
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16.0),
-                child: ProductCarouselListWithSellerWidget(
-                  seller: product.sellerfirebaseUid,
+                child: ProductCarouselListWithCategoryWidget(
+                  categoryId: product.categoryId,
                 ),
               ),
             ),
