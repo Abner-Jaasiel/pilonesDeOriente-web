@@ -1,7 +1,10 @@
+import 'package:carkett/providers/payment_controller.dart';
+import 'package:carkett/utils/utils.dart';
 import 'package:carkett/widgets/custom_appbar_widget.dart';
 import 'package:carkett/widgets/flutter_map_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 class PaymentInformationScreen extends StatelessWidget {
   final bool result;
@@ -10,6 +13,8 @@ class PaymentInformationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    PaymentController paymentController =
+        Provider.of<PaymentController>(context);
     return Scaffold(
       appBar: CustomAppbarWidget(),
       body: SingleChildScrollView(
@@ -44,22 +49,23 @@ class PaymentInformationScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 40),
-                    _buildDetailRow('Full Name', 'John Doe'),
+                    _buildDetailRow('Full Name', paymentController.legalName),
                     const SizedBox(height: 16),
-                    _buildDetailRow('Identity Card', '1234567890'),
+                    _buildDetailRow('Identity', paymentController.identityId),
                     const SizedBox(height: 16),
-                    _buildDetailRow('Payment Method', '**** **** **** 1234'),
+                    _buildDetailRow(
+                        'Payment Method', paymentController.cardNumber),
                     const SizedBox(height: 16),
                     const Text(
                       "Purchase Description",
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
-                    const Text("Product: Awesome Gadget"),
                     const SizedBox(height: 8),
-                    const Text("Price: \$199.99"),
+                    Text(
+                        "Price: ${getFormattedCurrency(paymentController.amountToPay, context)}"),
                     const SizedBox(height: 16),
-                    _buildDetailRow('Shipping Company', 'Awesome Delivery Co.'),
+                    _buildDetailRow('Shipping Company', ''),
                     const SizedBox(height: 40),
                     Container(
                       height: 250,
@@ -80,9 +86,9 @@ class PaymentInformationScreen extends StatelessWidget {
                         height: 200,
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(15),
-                          child: const FlutterMapWidget(
-                            lat: 40.7128,
-                            long: -74.0060,
+                          child: FlutterMapWidget(
+                            lat: paymentController.latitude,
+                            long: paymentController.longitude,
                           ),
                         ),
                       ),

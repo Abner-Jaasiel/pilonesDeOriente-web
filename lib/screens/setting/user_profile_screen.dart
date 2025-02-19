@@ -343,7 +343,7 @@ class UserProfileScreen extends StatelessWidget {
                         },
                         leading: const Icon(Icons.upload_outlined),
                         title: Text(S.current.upgradeToSeller),
-                        subtitle: Text(S.current.selectSellerType),
+                        subtitle: const Text("Seleccion de tipo"),
                       ),
                     if (isMy && data.seller != null)
                       ListTile(

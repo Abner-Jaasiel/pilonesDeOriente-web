@@ -105,7 +105,7 @@ Este es el vendedor de tipo **$type**.
       child: Container(
         width: MediaQuery.of(context).size.width < 600
             ? MediaQuery.of(context).size.width - 32
-            : 300, // Ajusta el ancho en pantallas pequeñas
+            : 300,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: colors,

@@ -1,3 +1,4 @@
+import 'package:carkett/generated/l10n.dart';
 import 'package:carkett/models/perfile_model.dart';
 import 'package:carkett/services/api_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -62,10 +63,14 @@ class _ProfileListScreenState extends State<ProfileListScreen> {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
-
+            if (snapshot.hasData != true) {
+              return Center(
+                child: Text(S.current.empty),
+              );
+            }
             if (snapshot.error != null) {
               return Center(
-                child: Text('Ocurrió un error: ${snapshot.error}'),
+                child: Text("${S.current.empty} ${snapshot.error}"),
               );
             }
 

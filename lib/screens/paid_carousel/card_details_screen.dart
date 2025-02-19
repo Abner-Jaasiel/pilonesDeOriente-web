@@ -1,4 +1,5 @@
 import 'package:carkett/providers/appconfig_controller.dart';
+import 'package:carkett/providers/product_aggregator_controller.dart';
 import 'package:carkett/services/api_service.dart';
 import 'package:carkett/utils/utils.dart';
 import 'package:firebase_auth/firebase_auth.dart';

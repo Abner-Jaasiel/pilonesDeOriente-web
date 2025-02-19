@@ -112,5 +112,6 @@
    "legalName": "Legal Name",
    "phoneNumber": "Phone Number",
    "upgradeToSeller": "Upgrade to seller",
-   "changeSellerPlan": "Change seller plan"
+   "changeSellerPlan": "Change seller plan",
+   "logInToContinue": "Please log in to continue"
 }

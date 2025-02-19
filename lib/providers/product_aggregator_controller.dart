@@ -13,6 +13,11 @@ class ProductAggregatorController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clean() {
+    _pickedFile.clear();
+    notifyListeners();
+  }
+
   List<XFile> get pickedFile => _pickedFile;
 
   String get categoryName => _categoryName;

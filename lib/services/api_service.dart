@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:carkett/models/order_seller_model.dart';
 import 'package:carkett/models/order_user_model.dart';
 import 'package:carkett/models/perfile_model.dart';
 import 'package:carkett/models/product_model.dart';
@@ -1028,6 +1029,44 @@ class APIService {
       }
     } catch (e) {
       throw Exception('Error al conectarse al servidor: $e');
+    }
+  }
+
+  /* Future<List<OrderSellerModel>> fetchOrdersBySeller(
+      String sellerFirebaseUid, String token) async {
+    final response = await http.get(
+      Uri.parse('$apiUrl/orders/seller/$sellerFirebaseUid'),
+      headers: {
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      List<dynamic> data = json.decode(response.body);
+      return data.map((item) => OrderSellerModel.fromJson(item)).toList();
+    } else {
+      throw Exception('Error al cargar los pedidos');
+    }
+  }*/
+  Future<List<OrderSellerModel>> fetchOrdersBySeller(
+      String sellerFirebaseUid, String token) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$apiUrl/orders/seller/$sellerFirebaseUid'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        List<dynamic> data = json.decode(response.body);
+        return data.map((item) => OrderSellerModel.fromJson(item)).toList();
+      } else {
+        throw Exception('Error al cargar los pedidos');
+      }
+    } catch (e) {
+      print('Error al obtener pedidos: $e');
+      return [];
     }
   }
 }

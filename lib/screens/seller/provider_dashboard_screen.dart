@@ -1,19 +1,11 @@
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:carkett/models/order_seller_model.dart';
+import 'package:carkett/services/api_service.dart';
+import 'package:carkett/utils/utils.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
-// Modelo de producto
-class Product {
-  final String name;
-  final String user;
-  final String location;
-  bool isShipped;
-
-  Product({
-    required this.name,
-    required this.user,
-    required this.location,
-    this.isShipped = false,
-  });
-}
+import 'package:intl/intl.dart';
+import 'package:screenshot/screenshot.dart';
 
 class ProviderDashboardScreen extends StatefulWidget {
   const ProviderDashboardScreen({super.key});
@@ -24,93 +16,349 @@ class ProviderDashboardScreen extends StatefulWidget {
 }
 
 class _ProviderDashboardScreenState extends State<ProviderDashboardScreen> {
-  List<Product> products = [
-    Product(name: 'Producto A', user: 'Usuario 1', location: 'Ubicación 1'),
-    Product(name: 'Producto B', user: 'Usuario 2', location: 'Ubicación 2'),
-    Product(name: 'Producto C', user: 'Usuario 3', location: 'Ubicación 3'),
-    Product(name: 'Producto D', user: 'Usuario 4', location: 'Ubicación 4'),
-  ];
+  List<OrderSellerModel> orders = [];
+  String? sellerFirebaseUid;
+  String? token;
+  List<int> selectedCartItemIds = []; // Lista de cartItemIds seleccionados
 
-  String filter = '';
-
-  // Filtro de búsqueda
-  List<Product> getFilteredProducts() {
-    if (filter.isEmpty) {
-      return products;
-    }
-    return products
-        .where((product) =>
-            product.name.toLowerCase().contains(filter.toLowerCase()))
-        .toList();
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentUser();
   }
 
-  // Método para marcar producto como enviado
-  void toggleShipment(Product product) {
+  // Obtener el UID y el token del usuario actualmente autenticado
+  Future<void> _getCurrentUser() async {
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        sellerFirebaseUid = user.uid;
+        token = await user.getIdToken();
+        fetchOrders(sellerFirebaseUid!, token!);
+      } else {
+        print("No hay usuario autenticado.");
+      }
+    } catch (e) {
+      print("Error obteniendo datos del usuario: $e");
+    }
+  }
+
+  // Función para obtener los pedidos del proveedor
+  Future<void> fetchOrders(String sellerFirebaseUid, String token) async {
+    final response =
+        await APIService().fetchOrdersBySeller(sellerFirebaseUid, token);
     setState(() {
-      product.isShipped = !product.isShipped;
+      orders = response;
     });
+  }
+
+  // Función para mostrar opciones en un modal
+  void showOrderOptions(OrderSellerModel order) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: SingleChildScrollView(
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Pedido de ${order.buyerFirebaseUid}',
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  Text('Producto: ${order.productId}'),
+                  Text('Cantidad: ${order.quantity}'),
+                  const SizedBox(height: 10),
+                  Text('Precio: \$${order.price}'),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                    ),
+                    child: const Text('Procesar pedido'),
+                  ),
+                  const SizedBox(height: 10),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 50),
+                      backgroundColor: Colors.red,
+                    ),
+                    child: const Text('Cancelar pedido'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Función para manejar la selección de un grupo
+  void toggleGroupSelection(bool isSelected, List<OrderSellerModel> orders) {
+    setState(() {
+      if (isSelected) {
+        // Agregar todos los cartItemIds del grupo
+        for (var order in orders) {
+          if (!selectedCartItemIds.contains(order.cartItemId)) {
+            selectedCartItemIds.add(order.cartItemId);
+          }
+        }
+      } else {
+        // Eliminar todos los cartItemIds del grupo
+        for (var order in orders) {
+          selectedCartItemIds.remove(order.cartItemId);
+        }
+      }
+    });
+  }
+
+  // Función para enviar los ítems seleccionados
+
+  void sendSelectedItems() {
+    if (selectedCartItemIds.isEmpty) return;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Confirmar Envío'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Se enviarán los siguientes ítems:'),
+              const SizedBox(height: 10),
+              ...orders
+                  .where(
+                      (order) => selectedCartItemIds.contains(order.cartItemId))
+                  .map((order) => ListTile(
+                        leading: Image.network(order.urlImage[0],
+                            width: 50, height: 50),
+                        title: Text('Producto: ${order.productId}'),
+                        subtitle: Text(
+                            'Cantidad: ${order.quantity}, Precio: \$${order.price}'),
+                      )),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Obtener los ítems seleccionados
+                final selectedOrders = orders
+                    .where((order) =>
+                        selectedCartItemIds.contains(order.cartItemId))
+                    .toList();
+
+                // Navegar a la pantalla que muestra todos los tickets
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        TicketListScreen(selectedOrders: selectedOrders),
+                  ),
+                );
+              },
+              child: const Text('Confirmar Envío'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    // Ordenar las órdenes por identityNumber y orderId
+    orders.sort((a, b) {
+      int identityCompare = a.identityNumber.compareTo(b.identityNumber);
+      if (identityCompare != 0) return identityCompare;
+      return a.orderId.compareTo(b.orderId);
+    });
+
+    // Agrupar las órdenes por identityNumber y orderId
+    final Map<String, List<OrderSellerModel>> groupedOrders = {};
+    for (var order in orders) {
+      final key = '${order.identityNumber}_${order.orderId}';
+      if (!groupedOrders.containsKey(key)) {
+        groupedOrders[key] = [];
+      }
+      groupedOrders[key]!.add(order);
+    }
+
+    // Convertir el mapa a una lista de grupos
+    final List<MapEntry<String, List<OrderSellerModel>>> orderGroups =
+        groupedOrders.entries.toList();
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dashboard de Proveedor'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              showSearch(
-                context: context,
-                delegate: ProductSearchDelegate(
-                  onFilterChanged: (value) {
-                    setState(() {
-                      filter = value;
-                    });
-                  },
-                ),
-              );
-            },
-          ),
-        ],
+        title: const Text('Pedidos del Proveedor'),
       ),
-      body: Column(
-        children: [
-          // Filtro de productos
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              decoration: const InputDecoration(
-                labelText: 'Filtrar por nombre',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (value) {
-                setState(() {
-                  filter = value;
-                });
+      body: orders.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : ListView.builder(
+              itemCount: orderGroups.length,
+              itemBuilder: (context, index) {
+                final group = orderGroups[index];
+                final key = group.key;
+                final ordersInGroup = group.value;
+
+                final parts = key.split('_');
+                final identityNumber = parts[0];
+                final orderId = parts[1];
+
+                // Verificar si todos los elementos del grupo están seleccionados
+                bool isGroupSelected = ordersInGroup.every(
+                    (order) => selectedCartItemIds.contains(order.cartItemId));
+
+                return Card(
+                  margin:
+                      const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 6,
+                  child: ExpansionTile(
+                    title: Row(
+                      children: [
+                        Checkbox(
+                          value: isGroupSelected,
+                          onChanged: (bool? value) {
+                            toggleGroupSelection(value ?? false, ordersInGroup);
+                          },
+                        ),
+                        Text(
+                          'Pedidos de Identidad: $identityNumber, Orden: $orderId',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    children: ordersInGroup.map((order) {
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                            vertical: 8, horizontal: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 4,
+                        child: CheckboxListTile(
+                          value: selectedCartItemIds.contains(order.cartItemId),
+                          onChanged: (bool? selected) {
+                            setState(() {
+                              if (selected ?? false) {
+                                selectedCartItemIds.add(order.cartItemId);
+                              } else {
+                                selectedCartItemIds.remove(order.cartItemId);
+                              }
+                            });
+                          },
+                          title: Row(
+                            children: [
+                              Container(
+                                  margin: const EdgeInsets.all(10),
+                                  width: 100,
+                                  height: 100,
+                                  child: CachedNetworkImage(
+                                      fit: BoxFit.cover,
+                                      imageUrl: order.urlImage[0])),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        'Pedido #${order.orderId}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .headlineSmall
+                                            ?.copyWith(
+                                                fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                  Text('Precio: \$${order.price}'),
+                                  Text('Cantidad: ${order.quantity}'),
+                                  Text('Estado: ${order.status}'),
+                                  Text(
+                                    'Fecha: ${DateFormat('dd/MM/yyyy').format(order.addedAt)}',
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                );
               },
             ),
-          ),
+      // Botón de envío flotante
+      floatingActionButton: FloatingActionButton(
+        onPressed: selectedCartItemIds.isNotEmpty ? sendSelectedItems : null,
+        tooltip: 'Enviar ítems seleccionados',
+        child: const Icon(Icons.send),
+      ),
+    );
+  }
+}
 
-          // Lista de productos
+class TicketListScreen extends StatelessWidget {
+  final List<OrderSellerModel> selectedOrders;
+
+  TicketListScreen({super.key, required this.selectedOrders});
+  final ScreenshotController controller = ScreenshotController();
+  final GlobalKey previewContainer = GlobalKey();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Tickets de Pedidos")),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: ElevatedButton(
+              onPressed: () {
+                captureTicket();
+              },
+              child: const Text('Imprimir Todos los Tickets'),
+            ),
+          ),
           Expanded(
             child: ListView.builder(
-              itemCount: getFilteredProducts().length,
+              itemCount: selectedOrders.length,
               itemBuilder: (context, index) {
-                Product product = getFilteredProducts()[index];
-                return ListTile(
-                  title: Text(product.name),
-                  subtitle: Text('Enviado a: ${product.location}'),
-                  trailing: Icon(
-                    product.isShipped ? Icons.check_circle : Icons.circle,
-                    color: product.isShipped ? Colors.green : Colors.grey,
+                final order = selectedOrders[index];
+                return Screenshot(
+                  controller: controller,
+                  child: RepaintBoundary(
+                    key: previewContainer,
+                    child: TicketWidget(order: order),
                   ),
-                  onTap: () {
-                    toggleShipment(product);
-                  },
-                  onLongPress: () {
-                    _showOrderDialog(context, product);
-                  },
                 );
               },
             ),
@@ -120,79 +368,10 @@ class _ProviderDashboardScreenState extends State<ProviderDashboardScreen> {
     );
   }
 
-  // Método para mostrar el proceso de pedido
-  void _showOrderDialog(BuildContext context, Product product) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Proceso de pedido'),
-          content: Text(
-              '¿Estás seguro de que quieres enviar el producto a ${product.user}?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () {
-                // Aquí puedes agregar el código para realizar el pedido
-                toggleShipment(product);
-                Navigator.of(context).pop();
-              },
-              child: const Text('Enviar'),
-            ),
-          ],
-        );
-      },
-    );
+  void captureTicket() async {
+    final file = await controller.capture();
+    if (file != null) {
+      // Utiliza el archivo según sea necesario (por ejemplo, para imprimir o compartir)
+    }
   }
-}
-
-// Delegado para la búsqueda
-class ProductSearchDelegate extends SearchDelegate<String> {
-  final Function(String) onFilterChanged;
-
-  ProductSearchDelegate({required this.onFilterChanged});
-
-  @override
-  List<Widget>? buildActions(BuildContext context) {
-    return [
-      IconButton(
-        icon: const Icon(Icons.clear),
-        onPressed: () {
-          query = '';
-          onFilterChanged(query);
-        },
-      ),
-    ];
-  }
-
-  @override
-  Widget buildLeading(BuildContext context) {
-    return IconButton(
-      icon: const Icon(Icons.arrow_back),
-      onPressed: () {
-        close(context, '');
-      },
-    );
-  }
-
-  @override
-  Widget buildResults(BuildContext context) {
-    return Container();
-  }
-
-  @override
-  Widget buildSuggestions(BuildContext context) {
-    return Container();
-  }
-}
-
-void main() {
-  runApp(const MaterialApp(
-    home: ProviderDashboardScreen(),
-  ));
 }

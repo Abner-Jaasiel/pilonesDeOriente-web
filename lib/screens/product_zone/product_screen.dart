@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:carkett/generated/l10n.dart';
 import 'package:carkett/models/product_model.dart';
@@ -186,7 +184,10 @@ class _ProductScreenState extends State<ProductScreen> {
                           },
                     child: isAddingToCart
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : Text(S.current.addToCart),
+                        : Text(
+                            S.current.addToCart,
+                            overflow: TextOverflow.clip,
+                          ),
                   ),
                 ],
               ),

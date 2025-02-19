@@ -78,6 +78,11 @@ dependencies:
   image: ^4.5.2
   spritewidget: ^2.0.1
   geolocator: ^13.0.2
+ 
+  qr_flutter: ^4.1.0
+  ticket_widget: ^1.0.2
+  screenshot: ^3.0.0
+  #esc_pos_utils_plus: ^2.0.4
   #webview_flutter: ^4.10.0
  
 

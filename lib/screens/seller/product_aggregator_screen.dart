@@ -124,6 +124,137 @@ class _ProductAggregatorScreenState extends State<ProductAggregatorScreen> {
     });
   }
 
+  ///?_submitProduct
+  ///? Envía el producto al servidor, valida los campos del formulario,
+  ///? maneja la carga de imágenes y muestra el progreso de la operación.
+  ///? Si la operación es exitosa, resetea los campos del formulario y
+  ///? actualiza el estado de la interfaz de usuario.
+  void _submitProduct() async {
+    // Obtiene la ubicación actual del usuario a través del LocationController.
+    LocationController locationController =
+        Provider.of<LocationController>(context, listen: false);
+
+    // Obtiene el usuario actual desde Firebase Auth.
+    User? user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      // Lista para almacenar las URLs de las imágenes subidas.
+      final List<String> urlImage = [];
+
+      // Crear el mapa de datos a enviar al servidor con la información del producto.
+      Map<String, dynamic> data = {
+        "name": _nameController.text, // Nombre del producto.
+        "description": _descriptionController.text, // Descripción del producto.
+        "seller_firebase_uid": user.uid, // UID del vendedor en Firebase.
+        "location_latitude":
+            locationController.locationLat, // Latitud de la ubicación.
+        "location_longitude":
+            locationController.locationLng, // Longitud de la ubicación.
+        "stock": null, // No se especifica el stock por el momento.
+        "price":
+            double.tryParse(_priceController.text) ?? 0, // Precio del producto.
+        "tags": _tags, // Etiquetas del producto.
+        "category_id": _categoryId, // ID de la categoría del producto.
+        "color": "" // Color del producto (en este caso está vacío).
+      };
+
+      // Si se está actualizando un producto, se incluye el ID.
+      if (widget.productId != null) {
+        data["id"] = widget.productId;
+      }
+
+      // Validación de campos obligatorios.
+      List<String> missingFields = [];
+      if (data["name"].isEmpty) missingFields.add("Nombre");
+      if (data["description"].isEmpty) missingFields.add("Descripción");
+      if (data["location_latitude"] == 0) missingFields.add("Location_lat");
+      if (data["location_longitude"] == 0) missingFields.add("Location_long");
+      if (data["price"] == 0) missingFields.add("Precio");
+      if (data["tags"].isEmpty) missingFields.add("Etiquetas");
+      if (data["category_id"] == null) missingFields.add("Categoría");
+
+      // Si faltan campos, se muestra un mensaje de error y se detiene la ejecución.
+      if (missingFields.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "Faltan los siguientes campos: ${missingFields.join(', ')}",
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      try {
+        // Muestra el indicador de carga mientras se procesa la solicitud.
+        superProgressIndicator(context);
+        APIService apiService = APIService();
+        final bool isUpdating = widget.productId != null;
+
+        // Envía los datos del producto al servidor (ya sea para creación o actualización).
+        final Map<String, dynamic>? productResponse =
+            await apiService.sendProductToServer(
+          data,
+          route: isUpdating ? "/update" : "/",
+          method: isUpdating ? "PATCH" : "POST",
+        );
+
+        // Si la respuesta es exitosa, continúa con el procesamiento.
+        if (productResponse != null) {
+          ProductAggregatorController productAggregatorController =
+              Provider.of<ProductAggregatorController>(context, listen: false);
+          final idProduct = productResponse["productId"] ?? widget.productId;
+
+          // Si se seleccionaron imágenes, se suben al servidor.
+          if (productAggregatorController.pickedFile.isNotEmpty) {
+            final List<String> urlImage = [];
+            for (var file in productAggregatorController.pickedFile) {
+              final String? imageUploaded =
+                  await uploadProductImageFirebase(file, idProduct);
+              if (imageUploaded != null) {
+                urlImage.add(imageUploaded);
+              }
+            }
+
+            // Si hay imágenes subidas, se actualiza la información del producto con las URLs de las imágenes.
+            if (urlImage.isNotEmpty) {
+              await apiService.sendProductToServer(
+                {"urlimage": urlImage, "id": idProduct},
+                route: "/updateImage",
+                method: "PATCH",
+              );
+            }
+          }
+
+          // Si todo es exitoso, se restablecen los formularios y se actualiza el estado de la UI.
+          Navigator.of(context).pop();
+          _nameController.clear();
+          _descriptionController.clear();
+          _priceController.clear();
+          urlImage.clear();
+          _tags.clear();
+
+          setState(() {
+            _currentStep--;
+          });
+        }
+      } catch (e) {
+        // Si ocurre un error, se muestra un mensaje de error al usuario.
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Ocurrió un error: ${e.toString()}"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } finally {
+        // Asegúrate de ocultar el indicador de progreso en cualquier caso.
+        Navigator.of(context).pop();
+      }
+    }
+  }
+
+/*
   void _submitProduct() async {
     LocationController locationController =
         Provider.of<LocationController>(context, listen: false);
@@ -187,25 +318,6 @@ class _ProductAggregatorScreenState extends State<ProductAggregatorScreen> {
             Provider.of<ProductAggregatorController>(context, listen: false);
         final idProduct = productResponse["productId"] ?? widget.productId;
 
-        // Subir imágenes si hay nuevas imágenes seleccionadas
-        /*if (productAggregatorController.pickedFile.isNotEmpty) {
-          for (var file in productAggregatorController.pickedFile) {
-            final String? imageUploaded =
-                await uploadProductImageFirebase(file, idProduct); //este comprime las imagenes y hace que la carga de la pantalla desaparez y se temrina congenlando, aunque al final simepre sigue, lo que queiro es que no suceda eso
-            if (imageUploaded != null) {
-              urlImage.add(imageUploaded);
-            }
-          }
-
-          // Actualizar imágenes en el servidor si hay nuevas
-          if (urlImage.isNotEmpty) {
-            await apiService.sendProductToServer(
-              {"urlimage": urlImage, "id": idProduct},
-              route: "/updateImage",
-              method: "PATCH",
-            );
-          }
-        }*/
         if (productAggregatorController.pickedFile.isNotEmpty) {
           Future.delayed(Duration.zero, () async {
             final List<String> urlImage = [];
@@ -241,95 +353,8 @@ class _ProductAggregatorScreenState extends State<ProductAggregatorScreen> {
         });
       }
     }
-
-    /* LocationController locationController =
-        Provider.of<LocationController>(context, listen: false);
-
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      final List<String> urlImage = [];
-
-      Map<String, dynamic> data = {
-        "name": _nameController.text,
-        "description": _descriptionController.text,
-        "seller_firebase_uid": user.uid,
-        "location_latitude": locationController.locationLat,
-        "location_longitude": locationController.locationLng,
-        "stock": null,
-        "price": double.tryParse(_priceController.text) ?? 0,
-        "tags": _tags,
-        "category_id": _categoryId,
-        "color": ""
-      };
-
-      if (widget.productId != null) {
-        data["id"] = widget.productId;
-      }
-
-      List<String> missingFields = [];
-      if (data["name"].isEmpty) missingFields.add("Nombre");
-      if (data["description"].isEmpty) missingFields.add("Descripción");
-      if (data["location_latitude"] == 0) missingFields.add("Location_lat");
-      if (data["location_longitude"] == 0) missingFields.add("Location_long");
-      if (data["price"] == 0) missingFields.add("Precio");
-      if (data["tags"].isEmpty) missingFields.add("Etiquetas");
-      if (data["category_id"] == null) missingFields.add("Categoría");
-
-      if (missingFields.isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              "Faltan los siguientes campos: ${missingFields.join(', ')}",
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      APIService apiService = APIService();
-      final Map<String, dynamic>? productResponse =
-          await apiService.sendProductToServer(data,
-              route: widget.productId != null ? "/update" : "/",
-              method: widget.productId != null ? "PATCH" : "POST");
-
-      if (productResponse != null) {
-        ProductAggregatorController productAggregatorController =
-            Provider.of<ProductAggregatorController>(context, listen: false);
-        final idProduct = productResponse["productId"] ?? widget.productId;
-
-        superProgressIndicator(context);
-        for (int i = 0;
-            i < productAggregatorController.pickedFile.length;
-            i++) {
-          final String? imageUploaded = await uploadProductImageFirebase(
-              productAggregatorController.pickedFile[i], idProduct);
-
-          if (imageUploaded != null) {
-            urlImage.add(imageUploaded);
-          }
-        }
-
-        if (urlImage.isNotEmpty) {
-          await apiService.sendProductToServer(
-              {"urlimage": urlImage, "id": idProduct},
-              route: "/updateImage", method: "PATCH");
-        }
-
-        Navigator.of(context).pop();
-        _nameController.clear();
-        _descriptionController.clear();
-        _priceController.clear();
-        urlImage.clear();
-        _tags.clear();
-
-        setState(() {
-          _currentStep--;
-        });
-      }
-    }*/
   }
-
+*/
   @override
   Widget build(BuildContext context) {
     final Stepper stepper = Stepper(
