@@ -1,5 +1,4 @@
 import 'package:carkett/models/categories_model.dart';
-import 'package:carkett/providers/aggregator_controller.dart';
 import 'package:carkett/providers/product_aggregator_controller.dart';
 import 'package:carkett/services/api_service.dart';
 import 'package:flutter/material.dart';

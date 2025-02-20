@@ -110,7 +110,8 @@ class _CommentsProductWidgetState extends State<CommentsProductWidget> {
                 builder: (BuildContext context) {
                   return StatefulBuilder(
                     builder: (BuildContext context, setState) {
-                      return widget.product.comments.isEmpty
+                      return widget.product.comments.isEmpty &&
+                              newCommets.isEmpty
                           ? BoxForCommentWidget(
                               commentController: commentController,
                               user: user,
@@ -121,7 +122,11 @@ class _CommentsProductWidgetState extends State<CommentsProductWidget> {
                               },
                             )
                           : Padding(
-                              padding: MediaQuery.of(context).viewInsets,
+                              padding: EdgeInsets.only(
+                                bottom:
+                                    MediaQuery.of(context).viewInsets.bottom /
+                                        1.4,
+                              ),
                               child: DraggableScrollableSheet(
                                 expand: false,
                                 builder: (context, scrollController) {

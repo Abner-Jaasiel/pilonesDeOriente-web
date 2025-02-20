@@ -157,6 +157,7 @@ class _ProductScreenState extends State<ProductScreen> {
                               },
                               route: "/cart",
                             );
+
                             setState(() {
                               isAddingToCart = false;
                             });

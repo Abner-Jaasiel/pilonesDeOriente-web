@@ -1,6 +1,5 @@
 import 'package:carkett/firebase_options.dart';
 import 'package:carkett/generated/l10n.dart';
-import 'package:carkett/providers/aggregator_controller.dart';
 import 'package:carkett/providers/appbar_controller.dart';
 import 'package:carkett/providers/appconfig_controller.dart';
 import 'package:carkett/providers/chat_model_ai_controller.dart';

@@ -177,6 +177,7 @@ class _CardDetailsScreenState extends State<CardDetailsScreen> {
                               paymentToken: "valid_token");
                       if (result) {
                         GoRouter.of(context).go('/buyer_info', extra: true);
+                        clearControllerCartItems();
                       } else {
                         GoRouter.of(context).go('/buyer_info', extra: false);
                         print("Hubo un problema al procesar la compra.");

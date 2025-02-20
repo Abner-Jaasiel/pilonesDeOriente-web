@@ -1,4 +1,3 @@
-import 'package:carkett/widgets/cards/flutter_product_card.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -9,6 +8,7 @@ class ProductAggregatorController extends ChangeNotifier {
 
   set pickedFile(List<XFile> value) {
     _pickedFile.clear();
+
     _pickedFile.addAll(value);
     notifyListeners();
   }

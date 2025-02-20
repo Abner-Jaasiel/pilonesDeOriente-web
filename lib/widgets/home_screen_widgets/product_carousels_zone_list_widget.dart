@@ -2,6 +2,7 @@ import 'package:carkett/models/products_carrusel_model.dart';
 import 'package:carkett/providers/route_manager_controller.dart';
 import 'package:carkett/services/api_service.dart';
 import 'package:carkett/widgets/cards/flutter_product_card.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -321,6 +322,7 @@ class _ProductCarouselListWithSellerWidgetState
               SizedBox(
                 height: 340,
                 child: ProductCarouselSellerListWidget(
+                  seller: widget.seller,
                   data: limitedProducts,
                   withIntialSpace: widget.withIntialSpace,
                 ),
@@ -345,6 +347,7 @@ class ProductCarouselListWidget extends StatelessWidget {
 
   final data;
   final bool withIntialSpace;
+
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
@@ -392,13 +395,18 @@ class ProductCarouselListWidget extends StatelessWidget {
 
 class ProductCarouselSellerListWidget extends StatelessWidget {
   const ProductCarouselSellerListWidget(
-      {super.key, required this.data, this.withIntialSpace = false});
+      {super.key,
+      required this.data,
+      required this.seller,
+      this.withIntialSpace = false});
 
   final data;
   final bool withIntialSpace;
+  final String seller;
 
   @override
   Widget build(BuildContext context) {
+    User? user = FirebaseAuth.instance.currentUser;
     return ListView.builder(
       key: const PageStorageKey<String>('pageStorageKey2'),
       scrollDirection: Axis.horizontal,
@@ -431,21 +439,24 @@ class ProductCarouselSellerListWidget extends StatelessWidget {
                   isAvailable: product.onSale,
                   borderRadius: 8.0,
                 ),
-                Positioned(
-                  top: 5,
-                  right: 5,
-                  child: IconButton(
-                    icon: const Icon(Icons.edit, color: Colors.white, size: 20),
-                    onPressed: () {
-                      GoRouter.of(context)
-                          .push('/product_aggregator', extra: product.id);
-                    },
-                    style: ButtonStyle(
-                      backgroundColor: WidgetStateProperty.all(Colors.black54),
-                      shape: WidgetStateProperty.all(const CircleBorder()),
+                if (user!.uid == seller)
+                  Positioned(
+                    top: 5,
+                    right: 5,
+                    child: IconButton(
+                      icon:
+                          const Icon(Icons.edit, color: Colors.white, size: 20),
+                      onPressed: () {
+                        GoRouter.of(context)
+                            .push('/product_aggregator', extra: product.id);
+                      },
+                      style: ButtonStyle(
+                        backgroundColor:
+                            WidgetStateProperty.all(Colors.black54),
+                        shape: WidgetStateProperty.all(const CircleBorder()),
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           );

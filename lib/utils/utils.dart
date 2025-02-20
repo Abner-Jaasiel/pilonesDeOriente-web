@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'dart:typed_data';
 import 'dart:io';
-import 'package:carkett/generated/l10n.dart';
 import 'package:carkett/models/order_seller_model.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -12,7 +11,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:carkett/models/user_model.dart';
 import 'package:carkett/providers/appconfig_controller.dart';
 import 'package:carkett/services/api_service.dart';
-import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
@@ -408,4 +406,9 @@ Longitud: ${order.locationLongitude ?? 'No disponible'}
       ),
     );
   }
+}
+
+void clearControllerCartItems() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  prefs.remove('cartItems');
 }

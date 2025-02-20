@@ -57,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
       'https://upload.wikimedia.org/wikipedia/commons/e/e4/AVANT-P870DMG-GAMING-LAPTOP.png',
     ];
     const List<String> urlImage = [
-      'https://img.freepik.com/vector-premium/compras-linea_2307-76.jpg',
+      'https://m.media-amazon.com/images/I/71EinHErCtL._SX3000_.jpg',
       'https://static.gopro.com/assets/blta2b8522e5372af40/bltb87db85f4ea39435/65e9d435f6198c0ef706c844/H12-product-finder-banner-768-2x.png',
       'https://hiraoka.com.pe/media/mageplaza/blog/post/a/m/amd-ryzen-intel-core-cual-es-el-mejor-procesador_1.jpg'
     ];

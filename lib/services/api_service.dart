@@ -5,6 +5,7 @@ import 'package:carkett/models/order_user_model.dart';
 import 'package:carkett/models/perfile_model.dart';
 import 'package:carkett/models/product_model.dart';
 import 'package:carkett/services/auth_firebase_service.dart';
+import 'package:carkett/utils/utils.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
@@ -124,8 +125,7 @@ class APIService {
 
       if (response.statusCode == 200) {
         print('FULL');
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        prefs.remove('cartItems');
+        clearControllerCartItems();
         return jsonDecode(response.body) as Map<String, dynamic>;
       } else {
         print('Error: ${response.statusCode}');
@@ -212,6 +212,9 @@ class APIService {
   }
 
   //Model
+  List<Map<String, dynamic>> conversationHistory =
+      []; // Historial de conversación
+
   Future<Map<String, dynamic>> fetchGeminiResponse(
       String query, String descripcionProducto) async {
     try {
@@ -222,27 +225,40 @@ class APIService {
         'Content-Type': 'application/json',
       };
 
+      // Agregar el nuevo mensaje a la conversación
+      conversationHistory.add({
+        'role': 'USER',
+        'parts': [
+          {'text': "Consulta del usuario: '$query'"},
+          {'text': "Descripción del producto: '$descripcionProducto'"}
+        ]
+      });
+
       final Map<String, dynamic> body = {
         'model': 'gemini-1.5-flash-latest',
-        'contents': [
-          {
-            'role': 'USER',
-            'parts': [
-              {'text': "user: '$query'"},
-              {'text': "product description: '$descripcionProducto'"}
-            ]
-          }
-        ],
+        'contents': conversationHistory, // Se envía todo el historial
         'systemInstruction': {
           'role': 'SYSTEM',
           'parts': [
-            {'text': 'Responde segun lo que el user pida'},
-            {'text': 'Debes ser objetiva en la respuesta'},
-            {'text': 'Se breve, pero detallada'}
+            {'text': 'Eres un asistente experto en productos.'},
+            {
+              'text':
+                  'Responde de manera clara, concisa y útil según la consulta del usuario.'
+            },
+            {
+              'text':
+                  'Utiliza la descripción del producto para dar respuestas precisas.'
+            },
+            {'text': 'Mantén el contexto de la conversación en todo momento.'},
+            {
+              'text':
+                  'Si la pregunta no tiene relación con el producto, responde de forma acorde.'
+            },
+            {'text': 'No agregues información innecesaria.'}
           ]
         },
         'generationConfig': {
-          'maxOutputTokens': 100,
+          'maxOutputTokens': 200,
         }
       };
 
@@ -254,6 +270,15 @@ class APIService {
 
       if (response.statusCode == 200) {
         Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+
+        // Agregar la respuesta del asistente al historial
+        conversationHistory.add({
+          'role': 'ASSISTANT',
+          'parts': [
+            {'text': jsonResponse.toString()}
+          ]
+        });
+
         return jsonResponse;
       } else {
         throw Exception('Error: ${response.statusCode} - ${response.body}');
