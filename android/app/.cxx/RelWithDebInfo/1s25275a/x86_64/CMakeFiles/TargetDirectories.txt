@@ -1,0 +1,2 @@
+A:/DEV/freelancer/pilones_de_oriente/android/app/.cxx/RelWithDebInfo/1s25275a/x86_64/CMakeFiles/edit_cache.dir
+A:/DEV/freelancer/pilones_de_oriente/android/app/.cxx/RelWithDebInfo/1s25275a/x86_64/CMakeFiles/rebuild_cache.dir

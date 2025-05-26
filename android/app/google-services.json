@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "1001155650177",
+    "firebase_url": "https://pilonesdeoriente-386b6-default-rtdb.firebaseio.com",
+    "project_id": "pilonesdeoriente-386b6",
+    "storage_bucket": "pilonesdeoriente-386b6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1001155650177:android:257b04a586192ccc7b6380",
+        "android_client_info": {
+          "package_name": "com.example.pilones_de_oriente"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAar1275IrVvchTOSqvO9Q5Rrln5u1tY1c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
