@@ -50,6 +50,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
           'numeroLote2': order['numeroLote2'] ?? 'No definido',
           'precioTotal': order['precioTotal'] ?? 0.0,
           'metodoPago': order['metodoPago'] ?? 'No especificado',
+          'montoRecibido': order['montoRecibido'] ?? 0.0,
+          'deuda':
+              (order['precioTotal'] ?? 0.0) - (order['montoRecibido'] ?? 0.0),
         });
       });
       _scrollToTop();
@@ -73,6 +76,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
             'numeroLote2': updatedOrder['numeroLote2'] ?? 'No definido',
             'precioTotal': updatedOrder['precioTotal'] ?? 0.0,
             'metodoPago': updatedOrder['metodoPago'] ?? 'No especificado',
+            'montoRecibido': updatedOrder['montoRecibido'] ?? 0.0,
+            'deuda': (updatedOrder['precioTotal'] ?? 0.0) -
+                (updatedOrder['montoRecibido'] ?? 0.0),
           };
         }
       });

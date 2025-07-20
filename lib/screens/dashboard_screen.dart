@@ -25,11 +25,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final TextEditingController _typesController = TextEditingController();
 
   final List<String> _currentTypes = [];
+  bool _requirePassword = true;
 
   @override
   void initState() {
     super.initState();
     _loadProductsFromFirebase();
+    _loadRequirePassword();
+  }
+
+  void _loadRequirePassword() async {
+    final ref = _dbRef.child('data/payment_passwords_require');
+    final snap = await ref.get();
+    if (snap.exists && mounted) {
+      setState(() {
+        _requirePassword = snap.value == true;
+      });
+    } else {
+      // Si no existe, lo creamos por defecto en true
+      await ref.set(true);
+      setState(() {
+        _requirePassword = true;
+      });
+    }
   }
 
   @override
@@ -78,12 +96,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       const SizedBox(width: 20),
       Expanded(
         flex: 3,
-        child: ListView(children: [
-          _buildProductsSection(),
-          const SizedBox(height: 20),
-          _goToScreens(context),
-          const SizedBox(height: 140),
-        ]),
+        child: ListView(
+          controller: scrollController,
+          children: [
+            _buildProductsSection(scrollController: scrollController),
+            const SizedBox(height: 20),
+            _goToScreens(context),
+            const SizedBox(height: 140),
+          ],
+        ),
+      ),
+      const SizedBox(width: 20),
+      Expanded(
+        flex: 2,
+        child: _buildPasswordPanel(scrollController: scrollController),
       ),
     ];
   }
@@ -93,13 +119,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return [
       Expanded(
         child: SingleChildScrollView(
+          controller: scrollController,
           child: Column(
             children: [
-              _buildProductsSection(),
+              _buildProductsSection(scrollController: scrollController),
               const SizedBox(height: 20),
               RoleConfigWidget(scrollController: scrollController),
               const SizedBox(height: 20),
               _goToScreens(context),
+              const SizedBox(height: 20),
+              _buildPasswordPanel(
+                  isMobile: true, scrollController: scrollController),
               const SizedBox(height: 140),
             ],
           ),
@@ -140,7 +170,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildProductsSection() {
+  Widget _buildProductsSection({ScrollController? scrollController}) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
@@ -245,7 +275,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   return DataRow2(
                     cells: [
                       DataCell(Text(product.name)),
-                      DataCell(Text(product.types.join(', '))),
+                      DataCell(
+                        SizedBox(
+                          width: 120,
+                          child: Text(
+                            product.types.join(', '),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
                       DataCell(
                         IconButton(
                           icon: const Icon(Icons.edit),
@@ -475,6 +514,165 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           },
         );
       },
+    );
+  }
+
+  // Panel de contraseñas especiales
+  Widget _buildPasswordPanel(
+      {bool isMobile = false, ScrollController? scrollController}) {
+    final DatabaseReference passwordRef =
+        _dbRef.child('data/payment_passwords');
+    final TextEditingController passwordController = TextEditingController();
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Contraseñas de Autorización de Pago',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: passwordController,
+                    decoration: const InputDecoration(
+                      labelText: 'Nueva contraseña',
+                      border: OutlineInputBorder(),
+                    ),
+                    obscureText: true,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.add),
+                  label: const Text('Agregar'),
+                  onPressed: () async {
+                    final pass = passwordController.text.trim();
+                    if (pass.isEmpty) return;
+                    final now = DateTime.now().toIso8601String();
+                    await passwordRef
+                        .push()
+                        .set({'password': pass, 'created': now});
+                    passwordController.clear();
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            const Text('Contraseñas registradas:',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Checkbox(
+                  value: _requirePassword,
+                  onChanged: (val) async {
+                    setState(() {
+                      _requirePassword = val ?? true;
+                    });
+                    await _dbRef
+                        .child('data/payment_passwords_require')
+                        .set(_requirePassword);
+                  },
+                ),
+                const Expanded(
+                  child: Text(
+                    'Solicitar contraseña en cambios en deudas',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
+              ],
+            ),
+            isMobile
+                ? SizedBox(
+                    height: 200,
+                    child: StreamBuilder(
+                      stream: passwordRef.onValue,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        }
+                        if (!snapshot.hasData ||
+                            snapshot.data?.snapshot.value == null) {
+                          return const Text('No hay contraseñas registradas.');
+                        }
+                        final data = Map<String, dynamic>.from(
+                            snapshot.data!.snapshot.value as Map);
+                        final entries = data.entries.toList();
+                        return ListView.builder(
+                          itemCount: entries.length,
+                          itemBuilder: (context, index) {
+                            final key = entries[index].key;
+                            final value =
+                                Map<String, dynamic>.from(entries[index].value);
+                            final pass = value['password'] ?? '';
+                            final created = value['created'] ?? '';
+                            return ListTile(
+                              title: Text('Contraseña: $pass'),
+                              subtitle: Text('Creada: $created'),
+                              trailing: IconButton(
+                                icon:
+                                    const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () async {
+                                  await passwordRef.child(key).remove();
+                                },
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  )
+                : Expanded(
+                    child: StreamBuilder(
+                      stream: passwordRef.onValue,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        }
+                        if (!snapshot.hasData ||
+                            snapshot.data?.snapshot.value == null) {
+                          return const Text('No hay contraseñas registradas.');
+                        }
+                        final data = Map<String, dynamic>.from(
+                            snapshot.data!.snapshot.value as Map);
+                        final entries = data.entries.toList();
+                        return ListView.builder(
+                          itemCount: entries.length,
+                          itemBuilder: (context, index) {
+                            final key = entries[index].key;
+                            final value =
+                                Map<String, dynamic>.from(entries[index].value);
+                            final pass = value['password'] ?? '';
+                            final created = value['created'] ?? '';
+                            return ListTile(
+                              title: Text('Contraseña: $pass'),
+                              subtitle: Text('Creada: $created'),
+                              trailing: IconButton(
+                                icon:
+                                    const Icon(Icons.delete, color: Colors.red),
+                                onPressed: () async {
+                                  await passwordRef.child(key).remove();
+                                },
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+          ],
+        ),
+      ),
     );
   }
 }

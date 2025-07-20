@@ -39,6 +39,11 @@ class _FormSentScreenState extends State<FormSentScreen> {
   double _totalPrice = 0;
   final FirebaseService _firebaseService = FirebaseService();
 
+  // Variables para autocompletado
+  List<Map<String, dynamic>> _previousRecords = [];
+  List<String> _suggestions = [];
+  bool _isLoadingSuggestions = false;
+
   // Función para parsear números con comas
   double _parseNumberWithCommas(String value) {
     // Remover todas las comas y luego parsear
@@ -61,6 +66,98 @@ class _FormSentScreenState extends State<FormSentScreen> {
     );
   }
 
+  // Función para cargar registros anteriores
+  Future<void> _loadPreviousRecords() async {
+    try {
+      final dbRef = FirebaseDatabase.instance.ref();
+      final snapshot = await dbRef.child('forms').get();
+
+      if (snapshot.exists) {
+        final Map<dynamic, dynamic> records =
+            snapshot.value as Map<dynamic, dynamic>;
+        setState(() {
+          _previousRecords = records.entries.map((entry) {
+            final data = Map<String, dynamic>.from(entry.value as Map);
+            data['key'] = entry.key;
+            return data;
+          }).toList();
+        });
+        print('Registros cargados: ${_previousRecords.length}');
+        if (_previousRecords.isNotEmpty) {
+          print('Primer registro: ${_previousRecords.first}');
+        }
+      } else {
+        print('No se encontraron registros en forms');
+      }
+    } catch (e) {
+      print('Error cargando registros anteriores: $e');
+    }
+  }
+
+  // Función para buscar sugerencias
+  void _searchSuggestions(String query) {
+    print('Buscando sugerencias para: "$query"');
+    print('Registros disponibles: ${_previousRecords.length}');
+
+    if (query.isEmpty) {
+      setState(() {
+        _suggestions = [];
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoadingSuggestions = true;
+    });
+
+    // Filtrar registros que contengan el nombre buscado
+    final filteredRecords = _previousRecords.where((record) {
+      final nombre = record['nombre']?.toString().toLowerCase() ?? '';
+      final matches = nombre.contains(query.toLowerCase());
+      if (matches) {
+        print('Encontrado: $nombre');
+      }
+      return matches;
+    }).toList();
+
+    // Obtener nombres únicos
+    final uniqueNames = <String>{};
+    for (final record in filteredRecords) {
+      if (record['nombre'] != null) {
+        uniqueNames.add(record['nombre'].toString());
+      }
+    }
+
+    setState(() {
+      _suggestions = uniqueNames.toList();
+      _isLoadingSuggestions = false;
+    });
+
+    print('Sugerencias encontradas: ${_suggestions.length}');
+    print('Sugerencias: $_suggestions');
+  }
+
+  // Función para auto-rellenar campos
+  void _autoFillFields(String selectedName) {
+    // Buscar el registro más reciente con ese nombre
+    final matchingRecords = _previousRecords
+        .where((record) => record['nombre'] == selectedName)
+        .toList();
+
+    if (matchingRecords.isNotEmpty) {
+      // Tomar el registro más reciente
+      final latestRecord = matchingRecords.last;
+
+      setState(() {
+        _emailController.text = latestRecord['email']?.toString() ?? '';
+        _telefonoController.text = latestRecord['telefono']?.toString() ?? '';
+        _siembraController.text = latestRecord['siembra']?.toString() ?? '';
+        _ciudadController.text = latestRecord['ciudad']?.toString() ?? '';
+        _sociosController.text = latestRecord['socios']?.toString() ?? '';
+      });
+    }
+  }
+
   void _clearControllers() {
     _nombreController.clear();
     _vendedorController.clear();
@@ -81,6 +178,10 @@ class _FormSentScreenState extends State<FormSentScreen> {
     _manualPrice = null;
     _totalPrice = 0;
     _esCredito = false;
+    // Limpiar sugerencias
+    setState(() {
+      _suggestions = [];
+    });
   }
 
   void _calculateTotalPrice() {
@@ -290,6 +391,7 @@ class _FormSentScreenState extends State<FormSentScreen> {
   void initState() {
     super.initState();
     _loadProducts();
+    _loadPreviousRecords(); // Cargar registros anteriores al iniciar
   }
 
   Future<void> _loadProducts() async {
@@ -349,7 +451,7 @@ class _FormSentScreenState extends State<FormSentScreen> {
                               children: [
                                 const SectionTitle(
                                     title: 'Información Personal'),
-                                CustomTextField(
+                                AutocompleteTextField(
                                   controller: _nombreController,
                                   label: 'Nombre',
                                   validator: (value) {
@@ -358,6 +460,14 @@ class _FormSentScreenState extends State<FormSentScreen> {
                                     }
                                     return null;
                                   },
+                                  onChanged: (value) {
+                                    _searchSuggestions(value);
+                                  },
+                                  onSuggestionSelected: (selectedName) {
+                                    _autoFillFields(selectedName);
+                                  },
+                                  suggestions: _suggestions,
+                                  isLoading: _isLoadingSuggestions,
                                 ),
                                 CustomTextField(
                                   controller: _vendedorController,
@@ -826,6 +936,127 @@ class CustomTextField extends StatelessWidget {
         keyboardType: keyboardType,
         validator: validator,
         onChanged: onChanged,
+      ),
+    );
+  }
+}
+
+class AutocompleteTextField extends StatefulWidget {
+  final TextEditingController controller;
+  final String label;
+  final TextInputType? keyboardType;
+  final String? Function(String?)? validator;
+  final void Function(String)? onChanged;
+  final List<String>? suggestions;
+  final bool isLoading;
+  final void Function(String)? onSuggestionSelected;
+
+  const AutocompleteTextField({
+    super.key,
+    required this.controller,
+    required this.label,
+    this.keyboardType,
+    this.validator,
+    this.onChanged,
+    this.suggestions,
+    this.isLoading = false,
+    this.onSuggestionSelected,
+  });
+
+  @override
+  _AutocompleteTextFieldState createState() => _AutocompleteTextFieldState();
+}
+
+class _AutocompleteTextFieldState extends State<AutocompleteTextField> {
+  final FocusNode _focusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Autocomplete<String>(
+        optionsBuilder: (TextEditingValue textEditingValue) {
+          if (textEditingValue.text.isEmpty) {
+            return const Iterable<String>.empty();
+          }
+          // Usar directamente las sugerencias que ya están filtradas
+          return widget.suggestions ?? const Iterable<String>.empty();
+        },
+        onSelected: (String selection) {
+          widget.controller.text = selection;
+          if (widget.onSuggestionSelected != null) {
+            widget.onSuggestionSelected!(selection);
+          }
+        },
+        optionsViewBuilder: (BuildContext context,
+            AutocompleteOnSelected<String> onSelected,
+            Iterable<String> options) {
+          return Material(
+            elevation: 4.0,
+            child: Container(
+              constraints: const BoxConstraints(maxHeight: 200),
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                itemCount: options.length,
+                itemBuilder: (BuildContext context, int index) {
+                  final String option = options.elementAt(index);
+                  return ListTile(
+                    title: Text(option),
+                    onTap: () {
+                      onSelected(option);
+                    },
+                  );
+                },
+              ),
+            ),
+          );
+        },
+        fieldViewBuilder: (BuildContext context,
+            TextEditingController textEditingController,
+            FocusNode focusNode,
+            VoidCallback onFieldSubmitted) {
+          return TextFormField(
+            controller: textEditingController,
+            focusNode: focusNode,
+            decoration: InputDecoration(
+              labelText: widget.label,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    BorderSide(color: Theme.of(context).colorScheme.primary),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    BorderSide(color: Theme.of(context).colorScheme.secondary),
+              ),
+              suffixIcon: widget.isLoading
+                  ? const Padding(
+                      padding: EdgeInsets.all(12.0),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : null,
+            ),
+            keyboardType: widget.keyboardType,
+            validator: widget.validator,
+            onChanged: (value) {
+              widget.controller.text = value;
+              if (widget.onChanged != null) {
+                widget.onChanged!(value);
+              }
+            },
+          );
+        },
       ),
     );
   }
