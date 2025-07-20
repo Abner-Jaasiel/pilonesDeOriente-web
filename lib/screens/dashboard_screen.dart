@@ -113,6 +113,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       {'path': '/formSent', 'label': 'Form Sent'},
       {'path': '/Orders', 'label': 'Orders'},
       {'path': '/reports', 'label': 'Reports'},
+      {'path': '/planillas', 'label': 'Planillas'},
     ];
 
     return Column(
@@ -304,7 +305,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void _addTypes() {
     final input = _typesController.text.trim();
     if (input.isNotEmpty) {
-      final newTypes = input.split(',').map((type) => type.trim()).toList();
+      final newTypes = input
+          .split(',')
+          .map((type) => type.trim())
+          .where((type) => type.isNotEmpty)
+          .toList();
       setState(() {
         _currentTypes.addAll(newTypes);
         _typesController.clear();
@@ -319,6 +324,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   void _addProduct() {
+    // Agregar tipos pendientes antes de validar
+    _addTypes();
+
     if (_productNameController.text.isEmpty ||
         _productPriceController.text.isEmpty ||
         _productGerminationPriceController.text.isEmpty ||
@@ -332,7 +340,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     setState(() {
       products.add(Product(
         name: _productNameController.text,
-        types: _currentTypes,
+        types: List.from(_currentTypes),
         price: double.parse(_productPriceController.text),
         germinationPrice: double.parse(_productGerminationPriceController.text),
       ));
@@ -384,14 +392,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         setState(() {
           products = loadedProducts;
         });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Productos cargados exitosamente')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No hay productos guardados')),
-        );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -428,6 +428,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               final newTypes = input
                                   .split(',')
                                   .map((type) => type.trim())
+                                  .where((type) => type.isNotEmpty)
                                   .toList();
                               setStateDialog(() {
                                 editableTypes.addAll(newTypes);
@@ -458,9 +459,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               actions: [
                 TextButton(
                   child: const Text('Cancelar'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
+                  onPressed: () => Navigator.of(context).pop(),
                 ),
                 TextButton(
                   child: const Text('Guardar'),

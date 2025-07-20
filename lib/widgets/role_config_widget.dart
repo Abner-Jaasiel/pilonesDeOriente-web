@@ -14,7 +14,6 @@ class RoleConfigWidget extends StatefulWidget {
 
 class _RoleConfigWidgetState extends State<RoleConfigWidget> {
   final TextEditingController _emailController = TextEditingController();
-
   String? _selectedRole;
   List<Map<String, String>> _assignedRoles = [];
 
@@ -43,7 +42,7 @@ class _RoleConfigWidgetState extends State<RoleConfigWidget> {
               'email': e['email']?.toString() ?? '',
               'role': e['role']?.toString() ?? '',
             };
-          }).toList();
+          }).toList(growable: true); // Lista mutable
         });
       }
     } catch (e) {
@@ -64,7 +63,8 @@ class _RoleConfigWidgetState extends State<RoleConfigWidget> {
       DatabaseEvent snapshot = await rolesRef.once();
       List<dynamic> currentRoles = [];
       if (snapshot.snapshot.value != null) {
-        currentRoles = snapshot.snapshot.value as List<dynamic>;
+        // Crear copia mutable
+        currentRoles = List.from(snapshot.snapshot.value as List<dynamic>);
       }
 
       currentRoles.add({
@@ -97,7 +97,8 @@ class _RoleConfigWidgetState extends State<RoleConfigWidget> {
       DatabaseEvent snapshot = await rolesRef.once();
       List<dynamic> currentRoles = [];
       if (snapshot.snapshot.value != null) {
-        currentRoles = snapshot.snapshot.value as List<dynamic>;
+        // Crear copia mutable
+        currentRoles = List.from(snapshot.snapshot.value as List<dynamic>);
       }
 
       currentRoles.removeWhere((role) => role['email'] == email);
@@ -143,17 +144,6 @@ class _RoleConfigWidgetState extends State<RoleConfigWidget> {
               ),
               keyboardType: TextInputType.emailAddress,
               autofillHints: [AutofillHints.email],
-              onChanged: (value) {
-                /*setState(() {
-                  final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
-                  if (!emailRegex.hasMatch(value)) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Correo electrónico no válido')),
-                    );
-                  }
-                });*/
-              },
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(

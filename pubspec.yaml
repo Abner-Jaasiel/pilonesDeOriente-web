@@ -44,7 +44,14 @@ dependencies:
   intl: ^0.20.2
   pdf: ^3.11.3
   printing: ^5.14.2
-  shared_preferences: ^2.5.2
+  shared_preferences: ^2.5.2 
+  permission_handler: ^11.4.0
+  android_alarm_manager_plus: ^4.0.7
+  google_sign_in: ^6.3.0
+  googleapis: ^14.0.0
+  awesome_notifications: ^0.10.1
+  syncfusion_flutter_datagrid: ^29.1.35
+ 
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -68,6 +75,8 @@ dev_dependencies:
 flutter:
   assets:
     - .env
+    - assets/
+    - assets/images/icon.png
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

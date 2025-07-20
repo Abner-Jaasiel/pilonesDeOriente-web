@@ -1,3 +1,4 @@
+import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -21,6 +22,15 @@ class _OrdersScreenState extends State<OrdersScreen> {
   void initState() {
     super.initState();
     _fetchOrders();
+    requestPermission();
+  }
+
+  void requestPermission() {
+    AwesomeNotifications().isNotificationAllowed().then((isAllowed) {
+      if (!isAllowed) {
+        AwesomeNotifications().requestPermissionToSendNotifications();
+      }
+    });
   }
 
   void _fetchOrders() {
@@ -29,12 +39,17 @@ class _OrdersScreenState extends State<OrdersScreen> {
       setState(() {
         orders.insert(0, {
           'key': event.snapshot.key,
-          'nombre': order['nombre'],
-          'cultivo': order['cultivo'],
-          'cantidad': order['cantidad'],
+          'nombre': order['nombre'] ?? 'No disponible',
+          'tipo': order['tipo'] ?? 'No disponible',
+          'cultivo': order['cultivo'] ?? 'No disponible',
+          'cantidad': order['cantidad'] ?? 0,
           'fechaSiembra': order['fechaSiembra'],
           'fechaEntrega': order['fechaEntrega'],
-          'semillaSobrante': order['semillaSobrante'], // Added new field
+          'semillaSobrante': order['semillaSobrante'],
+          'numeroLote': order['numeroLote'] ?? 'No definido',
+          'numeroLote2': order['numeroLote2'] ?? 'No definido',
+          'precioTotal': order['precioTotal'] ?? 0.0,
+          'metodoPago': order['metodoPago'] ?? 'No especificado',
         });
       });
       _scrollToTop();
@@ -47,13 +62,17 @@ class _OrdersScreenState extends State<OrdersScreen> {
         if (index != -1) {
           orders[index] = {
             'key': event.snapshot.key,
-            'nombre': updatedOrder['nombre'],
-            'cultivo': updatedOrder['cultivo'],
-            'cantidad': updatedOrder['cantidad'],
+            'nombre': updatedOrder['nombre'] ?? 'No disponible',
+            'tipo': updatedOrder['tipo'] ?? 'No disponible',
+            'cultivo': updatedOrder['cultivo'] ?? 'No disponible',
+            'cantidad': updatedOrder['cantidad'] ?? 0,
             'fechaSiembra': updatedOrder['fechaSiembra'],
             'fechaEntrega': updatedOrder['fechaEntrega'],
-            'semillaSobrante':
-                updatedOrder['semillaSobrante'], // Added new field
+            'semillaSobrante': updatedOrder['semillaSobrante'],
+            'numeroLote': updatedOrder['numeroLote'] ?? 'No definido',
+            'numeroLote2': updatedOrder['numeroLote2'] ?? 'No definido',
+            'precioTotal': updatedOrder['precioTotal'] ?? 0.0,
+            'metodoPago': updatedOrder['metodoPago'] ?? 'No especificado',
           };
         }
       });
@@ -61,18 +80,18 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 
   void _scrollToTop() {
-    Future.delayed(Duration(milliseconds: 300), () {
+    Future.delayed(const Duration(milliseconds: 300), () {
       if (_scrollControllerActivos.hasClients) {
         _scrollControllerActivos.animateTo(
           0.0,
-          duration: Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
       }
       if (_scrollControllerHistorial.hasClients) {
         _scrollControllerHistorial.animateTo(
           0.0,
-          duration: Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
       }

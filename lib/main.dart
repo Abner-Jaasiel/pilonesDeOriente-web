@@ -1,3 +1,5 @@
+import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,14 +11,29 @@ import 'package:pilones_de_oriente/screens/auth/register_screen.dart';
 import 'package:pilones_de_oriente/screens/dashboard_screen.dart';
 import 'package:pilones_de_oriente/screens/form_sent_screen.dart';
 import 'package:pilones_de_oriente/screens/orders_screen.dart';
+import 'package:pilones_de_oriente/screens/planillas_screen.dart';
 import 'package:pilones_de_oriente/screens/reports_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
   await dotenv.load(fileName: ".env");
+  AwesomeNotifications().initialize(
+    null, // Usa el ícono por defecto
+    [
+      NotificationChannel(
+        channelKey: 'basic_channel',
+        channelName: 'Notificaciones',
+        channelDescription: 'Canal de notificaciones',
+        defaultColor: Colors.blue,
+        importance: NotificationImportance.High,
+        ledColor: Colors.white,
+      ),
+    ],
+  );
 
   runApp(const MyApp());
 }
@@ -27,7 +44,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Flutter Demo',
+      title: 'Pilones De Oriente',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
@@ -67,6 +84,10 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/reports',
       builder: (context, state) => const ReportsScreen(),
+    ),
+    GoRoute(
+      path: '/planillas',
+      builder: (context, state) => PlanillasScreen(),
     ),
   ],
 );

@@ -26,19 +26,32 @@ class _FormSentScreenState extends State<FormSentScreen> {
   final _sociosController = TextEditingController();
   final _cantidadController = TextEditingController();
   final _manualPriceController = TextEditingController();
-  final _bancoController =
-      TextEditingController(); // Nuevo controlador para el banco
+  final _bancoController = TextEditingController();
+  final _montoRecibidoController = TextEditingController();
   String _cultivoSeleccionado = '';
   String _tipoSeleccionado = '';
   String _tipoGerminacionVenta = 'Germinacion';
   String _metodoPagoSeleccionado = 'Efectivo';
-  bool _dividirPrecio = false;
   bool _manualPriceUsed = false;
   bool _esCredito = false;
   double? _manualPrice;
   List<Product> _products = [];
   double _totalPrice = 0;
   final FirebaseService _firebaseService = FirebaseService();
+
+  // Función para parsear números con comas
+  double _parseNumberWithCommas(String value) {
+    // Remover todas las comas y luego parsear
+    String cleanedValue = value.replaceAll(',', '');
+    return double.tryParse(cleanedValue) ?? 0.0;
+  }
+
+  // Función para parsear enteros con comas
+  int _parseIntWithCommas(String value) {
+    // Remover todas las comas y luego parsear
+    String cleanedValue = value.replaceAll(',', '');
+    return int.tryParse(cleanedValue) ?? 1;
+  }
 
   Product get _selectedProduct {
     return _products.firstWhere(
@@ -58,12 +71,12 @@ class _FormSentScreenState extends State<FormSentScreen> {
     _sociosController.clear();
     _cantidadController.clear();
     _manualPriceController.clear();
-    _bancoController.clear(); // Limpiar el controlador del banco
+    _bancoController.clear();
+    _montoRecibidoController.clear();
     _cultivoSeleccionado = _products.isNotEmpty ? _products.first.name : '';
     _tipoSeleccionado = '';
     _tipoGerminacionVenta = 'Germinacion';
     _metodoPagoSeleccionado = 'Efectivo';
-    _dividirPrecio = false;
     _manualPriceUsed = false;
     _manualPrice = null;
     _totalPrice = 0;
@@ -72,7 +85,7 @@ class _FormSentScreenState extends State<FormSentScreen> {
 
   void _calculateTotalPrice() {
     setState(() {
-      int quantity = int.tryParse(_cantidadController.text) ?? 1;
+      int quantity = _parseIntWithCommas(_cantidadController.text);
       double basePrice;
 
       if (_manualPrice != null) {
@@ -84,17 +97,13 @@ class _FormSentScreenState extends State<FormSentScreen> {
       }
 
       _totalPrice = quantity * basePrice;
-
-      if (_dividirPrecio) {
-        _totalPrice /= 2;
-      }
     });
   }
 
   void _setManualPrice() {
     if (!_manualPriceUsed && _manualPriceController.text.isNotEmpty) {
       setState(() {
-        _manualPrice = double.tryParse(_manualPriceController.text) ?? 0.0;
+        _manualPrice = _parseNumberWithCommas(_manualPriceController.text);
         _manualPriceUsed = true;
         _calculateTotalPrice();
       });
@@ -104,6 +113,10 @@ class _FormSentScreenState extends State<FormSentScreen> {
   void _enviarDatos() async {
     if (_formKey.currentState!.validate()) {
       _calculateTotalPrice();
+
+      double montoRecibido =
+          _parseNumberWithCommas(_montoRecibidoController.text);
+      double deuda = _totalPrice - montoRecibido;
 
       Map<String, dynamic> datos = {
         'nombre': _nombreController.text,
@@ -116,17 +129,17 @@ class _FormSentScreenState extends State<FormSentScreen> {
         'cultivo': _cultivoSeleccionado,
         'tipo': _tipoSeleccionado,
         'tipoGerminacionVenta': _tipoGerminacionVenta,
-        'cantidad': _cantidadController.text,
+        'cantidad': _parseIntWithCommas(_cantidadController.text).toString(),
         'metodoPago': _metodoPagoSeleccionado,
-        'banco': _metodoPagoSeleccionado == 'Banco'
-            ? _bancoController.text
-            : null, // Enviar el banco solo si se selecciona
+        'banco':
+            _metodoPagoSeleccionado == 'Banco' ? _bancoController.text : null,
         'esCredito': _esCredito,
         'precioVenta': _selectedProduct.price,
         'precioGerminacion': _selectedProduct.germinationPrice,
         'precioManual': _manualPrice,
         'precioTotal': _totalPrice,
-        'dividirPrecio': _dividirPrecio,
+        'montoRecibido': montoRecibido,
+        'deuda': deuda,
         'fecha': DateFormat('yyyy-MM-dd').format(DateTime.now()),
       };
 
@@ -188,15 +201,25 @@ class _FormSentScreenState extends State<FormSentScreen> {
                       NumberFormat.currency(symbol: 'L ', decimalDigits: 2)
                           .format(datos['precioTotal']),
                     ),
+                    _buildSummaryItem(
+                      'Monto Recibido:',
+                      NumberFormat.currency(symbol: 'L ', decimalDigits: 2)
+                          .format(datos['montoRecibido']),
+                    ),
+                    _buildSummaryItem(
+                      'Deuda:',
+                      NumberFormat.currency(symbol: 'L ', decimalDigits: 2)
+                          .format(datos['deuda']),
+                      style: TextStyle(
+                        color: datos['deuda'] > 0 ? Colors.red : Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     _buildSummaryItem('Método de Pago:', datos['metodoPago']),
                     if (datos['banco'] != null)
-                      _buildSummaryItem('Banco:',
-                          datos['banco']), // Mostrar el banco si existe
-
+                      _buildSummaryItem('Banco:', datos['banco']),
                     _buildSummaryItem(
                         'Es Crédito:', datos['esCredito'] ? 'Sí' : 'No'),
-                    _buildSummaryItem('Dividir Precio (50%):',
-                        datos['dividirPrecio'] ? 'Sí' : 'No'),
                     _buildSummaryItem('Fecha:', datos['fecha']),
                     const SizedBox(height: 20),
                     const Text(
@@ -234,7 +257,7 @@ class _FormSentScreenState extends State<FormSentScreen> {
     }
   }
 
-  Widget _buildSummaryItem(String label, dynamic value) {
+  Widget _buildSummaryItem(String label, dynamic value, {TextStyle? style}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -251,10 +274,11 @@ class _FormSentScreenState extends State<FormSentScreen> {
           Expanded(
             child: Text(
               value.toString(),
-              style: const TextStyle(
-                fontWeight: FontWeight.w400,
-                fontSize: 14,
-              ),
+              style: style ??
+                  const TextStyle(
+                    fontWeight: FontWeight.w400,
+                    fontSize: 14,
+                  ),
             ),
           ),
         ],
@@ -298,6 +322,10 @@ class _FormSentScreenState extends State<FormSentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    double montoRecibido =
+        _parseNumberWithCommas(_montoRecibidoController.text);
+    double deuda = _totalPrice - montoRecibido;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Formulario de Envío'),
@@ -306,390 +334,435 @@ class _FormSentScreenState extends State<FormSentScreen> {
         future: FirebaseService().getCurrentUserRole(),
         builder: (context, snapshot) {
           final String role = dotenv.env['ROLE_FORM'] ?? 'form';
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: SingleChildScrollView(
-                child: Center(
-                  child: Form(
-                    key: _formKey,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 600),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const SectionTitle(title: 'Información Personal'),
-                          CustomTextField(
-                            controller: _nombreController,
-                            label: 'Nombre',
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Por favor ingresa tu nombre';
-                              }
-                              return null;
-                            },
-                          ),
-                          CustomTextField(
-                            controller: _vendedorController,
-                            label: 'Nombre del Vendedor',
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Por favor ingresa el nombre del vendedor';
-                              }
-                              return null;
-                            },
-                          ),
-                          CustomTextField(
-                            controller: _emailController,
-                            label: 'Email',
-                            keyboardType: TextInputType.emailAddress,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Por favor ingresa tu email';
-                              } else if (!RegExp(r"^[^@]+@[^@]+\.[^@]+")
-                                  .hasMatch(value)) {
-                                return 'Por favor ingresa un email válido';
-                              }
-                              return null;
-                            },
-                          ),
-                          CustomTextField(
-                            controller: _telefonoController,
-                            label: 'Teléfono',
-                            keyboardType: TextInputType.phone,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Por favor ingresa tu teléfono';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SectionTitle(title: 'Información de Siembra'),
-                          CustomTextField(
-                            controller: _siembraController,
-                            label: '¿Dónde siembras?',
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Por favor ingresa donde siembras';
-                              }
-                              return null;
-                            },
-                          ),
-                          CustomTextField(
-                            controller: _ciudadController,
-                            label: 'Ciudad',
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Por favor ingresa tu ciudad';
-                              }
-                              return null;
-                            },
-                          ),
-                          CustomTextField(
-                            controller: _sociosController,
-                            label: 'Socios',
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Por favor ingresa los socios';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SectionTitle(title: 'Opciones de Cultivo'),
-                          DropdownButtonFormField<String>(
-                            value: _cultivoSeleccionado.isNotEmpty
-                                ? _cultivoSeleccionado
-                                : null,
-                            decoration: const InputDecoration(
-                              labelText: 'Tipo de Cultivo',
-                            ),
-                            items: _products
-                                .map((product) => DropdownMenuItem<String>(
-                                      value: product.name,
-                                      child: Text(product.name),
-                                    ))
-                                .toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                _cultivoSeleccionado = value!;
-                                _tipoSeleccionado =
-                                    _selectedProduct.types.isNotEmpty
-                                        ? _selectedProduct.types.first
-                                        : '';
-                                _calculateTotalPrice();
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 20),
-                          if (_cultivoSeleccionado.isNotEmpty &&
-                              _selectedProduct.types.isNotEmpty)
-                            DropdownButtonFormField<String>(
-                              value: _tipoSeleccionado.isNotEmpty
-                                  ? _tipoSeleccionado
-                                  : null,
-                              decoration: const InputDecoration(
-                                labelText: 'Tipo de Producto',
-                              ),
-                              items: _selectedProduct.types
-                                  .map((type) => DropdownMenuItem<String>(
-                                        value: type,
-                                        child: Text(type),
-                                      ))
-                                  .toList(),
-                              onChanged: (value) {
-                                setState(() {
-                                  _tipoSeleccionado = value!;
-                                });
-                              },
-                            ),
-                          const SizedBox(height: 20),
-                          Center(
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                children: [
-                                  Radio<String>(
-                                    value: 'Germinacion',
-                                    groupValue: _tipoGerminacionVenta,
-                                    onChanged: (value) {
-                                      setState(() {
-                                        _tipoGerminacionVenta = value!;
-                                        _calculateTotalPrice();
-                                      });
-                                    },
-                                  ),
-                                  const Text('Germinación'),
-                                  Radio<String>(
-                                    value: 'Venta',
-                                    groupValue: _tipoGerminacionVenta,
-                                    onChanged: (value) {
-                                      setState(() {
-                                        _tipoGerminacionVenta = value!;
-                                        _calculateTotalPrice();
-                                      });
-                                    },
-                                  ),
-                                  const Text('Venta'),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          const SectionTitle(title: 'Método de Pago'),
-                          CheckboxListTile(
-                            title: const Text('Efectivo'),
-                            value: _metodoPagoSeleccionado == 'Efectivo',
-                            onChanged: (bool? value) {
-                              setState(() {
-                                if (value == true) {
-                                  _metodoPagoSeleccionado = 'Efectivo';
-                                  _bancoController
-                                      .clear(); // Limpiar el campo del banco
-                                }
-                              });
-                            },
-                          ),
-                          CheckboxListTile(
-                            title: const Text('Transferencia'),
-                            value: _metodoPagoSeleccionado == 'Transferencia',
-                            onChanged: (bool? value) {
-                              setState(() {
-                                if (value == true) {
-                                  _metodoPagoSeleccionado = 'Transferencia';
-                                  _bancoController
-                                      .clear(); // Limpiar el campo del banco
-                                }
-                              });
-                            },
-                          ),
-                          CheckboxListTile(
-                            title: const Text('Cheque'),
-                            value: _metodoPagoSeleccionado == 'Cheque',
-                            onChanged: (bool? value) {
-                              setState(() {
-                                if (value == true) {
-                                  _metodoPagoSeleccionado = 'Cheque';
-                                  _bancoController
-                                      .clear(); // Limpiar el campo del banco
-                                }
-                              });
-                            },
-                          ),
-                          CheckboxListTile(
-                            title: const Text('Tarjeta'),
-                            value: _metodoPagoSeleccionado == 'Tarjeta',
-                            onChanged: (bool? value) {
-                              setState(() {
-                                if (value == true) {
-                                  _metodoPagoSeleccionado = 'Tarjeta';
-                                  _bancoController
-                                      .clear(); // Limpiar el campo del banco
-                                }
-                              });
-                            },
-                          ),
-                          CheckboxListTile(
-                            title: const Text('Banco'),
-                            value: _metodoPagoSeleccionado == 'Banco',
-                            onChanged: (bool? value) {
-                              setState(() {
-                                if (value == true) {
-                                  _metodoPagoSeleccionado = 'Banco';
-                                } else {
-                                  _metodoPagoSeleccionado =
-                                      'Efectivo'; // Volver a Efectivo si se deselecciona
-                                  _bancoController
-                                      .clear(); // Limpiar el campo del banco
-                                }
-                              });
-                            },
-                          ),
-                          if (_metodoPagoSeleccionado == 'Banco')
-                            CustomTextField(
-                              controller: _bancoController,
-                              label: 'Nombre del Banco',
-                              validator: (value) {
-                                if (_metodoPagoSeleccionado == 'Banco' &&
-                                    (value == null || value.isEmpty)) {
-                                  return 'Por favor ingresa el nombre del banco';
-                                }
-                                return null;
-                              },
-                            ),
-                          Divider(),
-                          CheckboxListTile(
-                            title: const Text('Es Crédito'),
-                            value: _esCredito,
-                            onChanged: (bool? value) {
-                              setState(() {
-                                _esCredito = value ?? false;
-                              });
-                            },
-                          ),
-                          const Divider(),
-                          CheckboxListTile(
-                            title: const Text('50% del precio total'),
-                            value: _dividirPrecio,
-                            onChanged: (bool? value) {
-                              setState(() {
-                                _dividirPrecio = value ?? false;
-                                _calculateTotalPrice();
-                              });
-                            },
-                          ),
-                          const SizedBox(height: 20),
-                          Text(
-                            _manualPriceUsed
-                                ? 'El precio manual ya fue aplicado:'
-                                : 'Este ajuste solo se puede usar una vez por formulario:',
-                            style: TextStyle(
-                              color:
-                                  _manualPriceUsed ? Colors.red : Colors.grey,
-                              fontSize: 12,
-                            ),
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: MediaQuery.of(context).size.width * 0.5,
-                                constraints:
-                                    BoxConstraints(maxWidth: 300, minWidth: 50),
-                                child: CustomTextField(
-                                  controller: _manualPriceController,
-                                  label: 'Precio Unitario (L)',
-                                  keyboardType: TextInputType.number,
+          return snapshot.data == role || snapshot.data == 'admin'
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: SingleChildScrollView(
+                      child: Center(
+                        child: Form(
+                          key: _formKey,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 600),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                const SectionTitle(
+                                    title: 'Información Personal'),
+                                CustomTextField(
+                                  controller: _nombreController,
+                                  label: 'Nombre',
                                   validator: (value) {
-                                    if (value != null && value.isNotEmpty) {
-                                      if (double.tryParse(value) == null) {
-                                        return 'Ingresa un número válido';
-                                      }
+                                    if (value == null || value.isEmpty) {
+                                      return 'Por favor ingresa tu nombre';
                                     }
                                     return null;
                                   },
                                 ),
-                              ),
-                              const SizedBox(width: 10),
-                              ElevatedButton(
-                                onPressed:
-                                    _manualPriceUsed ? null : _setManualPrice,
-                                child: Text(
-                                    _manualPriceUsed ? 'Usado' : 'Aplicar'),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                          CustomQuantityField(
-                            tipoGerminacionVenta: _tipoGerminacionVenta,
-                            controller: _cantidadController,
-                            label: 'Cantidad',
-                            onQuantityChanged: _calculateTotalPrice,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Por favor ingresa la cantidad';
-                              }
-                              if (int.tryParse(value) == null) {
-                                return 'Por favor ingresa un número válido';
-                              }
-                              return null;
-                            },
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
+                                CustomTextField(
+                                  controller: _vendedorController,
+                                  label: 'Nombre del Vendedor',
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Por favor ingresa el nombre del vendedor';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                CustomTextField(
+                                  controller: _emailController,
+                                  label: 'Email',
+                                  keyboardType: TextInputType.emailAddress,
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Por favor ingresa tu email';
+                                    } else if (!RegExp(r"^[^@]+@[^@]+\.[^@]+")
+                                        .hasMatch(value)) {
+                                      return 'Por favor ingresa un email válido';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                CustomTextField(
+                                  controller: _telefonoController,
+                                  label: 'Teléfono',
+                                  keyboardType: TextInputType.phone,
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Por favor ingresa tu teléfono';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SectionTitle(
+                                    title: 'Información de Siembra'),
+                                CustomTextField(
+                                  controller: _siembraController,
+                                  label: '¿Dónde siembras?',
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Por favor ingresa donde siembras';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                CustomTextField(
+                                  controller: _ciudadController,
+                                  label: 'Ciudad',
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Por favor ingresa tu ciudad';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                CustomTextField(
+                                  controller: _sociosController,
+                                  label: 'Socios',
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Por favor ingresa los socios';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SectionTitle(
+                                    title: 'Opciones de Cultivo'),
+                                DropdownButtonFormField<String>(
+                                  value: _cultivoSeleccionado.isNotEmpty
+                                      ? _cultivoSeleccionado
+                                      : null,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Tipo de Cultivo',
+                                  ),
+                                  items: _products
+                                      .map(
+                                          (product) => DropdownMenuItem<String>(
+                                                value: product.name,
+                                                child: Text(product.name),
+                                              ))
+                                      .toList(),
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _cultivoSeleccionado = value!;
+                                      _tipoSeleccionado =
+                                          _selectedProduct.types.isNotEmpty
+                                              ? _selectedProduct.types.first
+                                              : '';
+                                      _calculateTotalPrice();
+                                    });
+                                  },
+                                ),
+                                const SizedBox(height: 20),
+                                if (_cultivoSeleccionado.isNotEmpty &&
+                                    _selectedProduct.types.isNotEmpty)
+                                  DropdownButtonFormField<String>(
+                                    value: _tipoSeleccionado.isNotEmpty
+                                        ? _tipoSeleccionado
+                                        : null,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Tipo de Producto',
+                                    ),
+                                    items: _selectedProduct.types
+                                        .map((type) => DropdownMenuItem<String>(
+                                              value: type,
+                                              child: Text(type),
+                                            ))
+                                        .toList(),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _tipoSeleccionado = value!;
+                                      });
+                                    },
+                                  ),
+                                const SizedBox(height: 20),
+                                Center(
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: Row(
+                                      children: [
+                                        Radio<String>(
+                                          value: 'Germinacion',
+                                          groupValue: _tipoGerminacionVenta,
+                                          onChanged: (value) {
+                                            setState(() {
+                                              _tipoGerminacionVenta = value!;
+                                              _calculateTotalPrice();
+                                            });
+                                          },
+                                        ),
+                                        const Text('Germinación'),
+                                        Radio<String>(
+                                          value: 'Venta',
+                                          groupValue: _tipoGerminacionVenta,
+                                          onChanged: (value) {
+                                            setState(() {
+                                              _tipoGerminacionVenta = value!;
+                                              _calculateTotalPrice();
+                                            });
+                                          },
+                                        ),
+                                        const Text('Venta'),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                const SectionTitle(title: 'Método de Pago'),
+                                CheckboxListTile(
+                                  title: const Text('Efectivo'),
+                                  value: _metodoPagoSeleccionado == 'Efectivo',
+                                  onChanged: (bool? value) {
+                                    setState(() {
+                                      if (value == true) {
+                                        _metodoPagoSeleccionado = 'Efectivo';
+                                        _bancoController.clear();
+                                      }
+                                    });
+                                  },
+                                ),
+                                CheckboxListTile(
+                                  title: const Text('Cheque'),
+                                  value: _metodoPagoSeleccionado == 'Cheque',
+                                  onChanged: (bool? value) {
+                                    setState(() {
+                                      if (value == true) {
+                                        _metodoPagoSeleccionado = 'Cheque';
+                                        _bancoController.clear();
+                                      }
+                                    });
+                                  },
+                                ),
+                                CheckboxListTile(
+                                  title: const Text('Tarjeta'),
+                                  value: _metodoPagoSeleccionado == 'Tarjeta',
+                                  onChanged: (bool? value) {
+                                    setState(() {
+                                      if (value == true) {
+                                        _metodoPagoSeleccionado = 'Tarjeta';
+                                        _bancoController.clear();
+                                      }
+                                    });
+                                  },
+                                ),
+                                CheckboxListTile(
+                                  title: const Text('Banco'),
+                                  value: _metodoPagoSeleccionado == 'Banco',
+                                  onChanged: (bool? value) {
+                                    setState(() {
+                                      if (value == true) {
+                                        _metodoPagoSeleccionado = 'Banco';
+                                      } else {
+                                        _metodoPagoSeleccionado = 'Efectivo';
+                                        _bancoController.clear();
+                                      }
+                                    });
+                                  },
+                                ),
+                                if (_metodoPagoSeleccionado == 'Banco')
+                                  CustomTextField(
+                                    controller: _bancoController,
+                                    label: 'Nombre del Banco',
+                                    validator: (value) {
+                                      if (_metodoPagoSeleccionado == 'Banco' &&
+                                          (value == null || value.isEmpty)) {
+                                        return 'Por favor ingresa el nombre del banco';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                const Divider(),
+                                CheckboxListTile(
+                                  title: const Text('Es Crédito'),
+                                  value: _esCredito,
+                                  onChanged: (bool? value) {
+                                    setState(() {
+                                      _esCredito = value ?? false;
+                                    });
+                                  },
+                                ),
+                                const Divider(),
+                                CustomTextField(
+                                  controller: _montoRecibidoController,
+                                  label: 'Monto Recibido (L)',
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (value) {
+                                    setState(() {});
+                                  },
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Por favor ingresa el monto recibido';
+                                    }
+                                    if (_parseNumberWithCommas(value) < 0.0) {
+                                      return 'El monto no puede ser negativo';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 20),
                                 Text(
-                                    'Precio Venta: L ${_selectedProduct.price.toStringAsFixed(2)}'),
-                                Text(
-                                    'Precio Germinación: L ${_selectedProduct.germinationPrice.toStringAsFixed(2)}'),
-                                if (_manualPrice != null)
-                                  Text(
-                                      'Precio Manual: L ${_manualPrice!.toStringAsFixed(2)}'),
-                                Text(
-                                  'Precio Total: ${NumberFormat.currency(symbol: 'L ', decimalDigits: 2).format(_totalPrice)}',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodyLarge
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.bold,
+                                  _manualPriceUsed
+                                      ? 'El precio manual ya fue aplicado:'
+                                      : 'Este ajuste solo se puede usar una vez por formulario:',
+                                  style: TextStyle(
+                                    color: _manualPriceUsed
+                                        ? Colors.red
+                                        : Colors.grey,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      width: MediaQuery.of(context).size.width *
+                                          0.5,
+                                      constraints: const BoxConstraints(
+                                          maxWidth: 300, minWidth: 50),
+                                      child: CustomTextField(
+                                        controller: _manualPriceController,
+                                        label: 'Precio Unitario (L)',
+                                        keyboardType: TextInputType.number,
+                                        validator: (value) {
+                                          if (value != null &&
+                                              value.isNotEmpty) {
+                                            if (_parseNumberWithCommas(value) ==
+                                                0.0) {
+                                              return 'Ingresa un número válido';
+                                            }
+                                          }
+                                          return null;
+                                        },
                                       ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    ElevatedButton(
+                                      onPressed: _manualPriceUsed
+                                          ? null
+                                          : _setManualPrice,
+                                      child: Text(_manualPriceUsed
+                                          ? 'Usado'
+                                          : 'Aplicar'),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 20),
+                                CustomQuantityField(
+                                  tipoGerminacionVenta: _tipoGerminacionVenta,
+                                  controller: _cantidadController,
+                                  label: 'Cantidad',
+                                  onQuantityChanged: _calculateTotalPrice,
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Por favor ingresa la cantidad';
+                                    }
+                                    if (_parseIntWithCommas(value) == 0) {
+                                      return 'Por favor ingresa un número válido';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 8.0),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                          'Precio Venta: L ${_selectedProduct.price.toStringAsFixed(2)}'),
+                                      Text(
+                                          'Precio Germinación: L ${_selectedProduct.germinationPrice.toStringAsFixed(2)}'),
+                                      if (_manualPrice != null)
+                                        Text(
+                                            'Precio Manual: L ${_manualPrice!.toStringAsFixed(2)}'),
+                                      Text(
+                                        'Precio Total: ${NumberFormat.currency(symbol: 'L ', decimalDigits: 2).format(_totalPrice)}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyLarge
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
+                                      if (_montoRecibidoController
+                                          .text.isNotEmpty)
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Monto Recibido: ${NumberFormat.currency(symbol: 'L ', decimalDigits: 2).format(montoRecibido)}',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyLarge,
+                                            ),
+                                            Text(
+                                              'Deuda: ${NumberFormat.currency(symbol: 'L ', decimalDigits: 2).format(deuda)}',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyLarge
+                                                  ?.copyWith(
+                                                    color: deuda > 0
+                                                        ? Colors.red
+                                                        : Colors.green,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                ElevatedButton(
+                                  onPressed: _enviarDatos,
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 15),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  child: const Text('Enviar'),
+                                ),
+                                const SizedBox(height: 100),
+                                ElevatedButton(
+                                  onPressed: () async {
+                                    context.push('/planillas');
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 15),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  child: const Text('Planillas'),
+                                ),
+                                const SizedBox(height: 10),
+                                ElevatedButton(
+                                  onPressed: () async {
+                                    await FirebaseAuth.instance.signOut();
+                                    context.go('/login');
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 15),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  child: const Text('Cerrar sesión'),
                                 ),
                               ],
                             ),
                           ),
-                          ElevatedButton(
-                            onPressed: _enviarDatos,
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 15),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            child: const Text('Enviar'),
-                          ),
-                          const SizedBox(height: 100),
-                          ElevatedButton(
-                            onPressed: () async {
-                              await FirebaseAuth.instance.signOut();
-                              context.go('/login');
-                            },
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 15),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            child: const Text('Cerrar sesión'),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
-            ),
-          );
+                )
+              : Container();
         },
       ),
     );
@@ -720,6 +793,7 @@ class CustomTextField extends StatelessWidget {
   final String label;
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
+  final void Function(String)? onChanged;
 
   const CustomTextField({
     super.key,
@@ -727,6 +801,7 @@ class CustomTextField extends StatelessWidget {
     required this.label,
     this.keyboardType,
     this.validator,
+    this.onChanged,
   });
 
   @override
@@ -750,6 +825,7 @@ class CustomTextField extends StatelessWidget {
         ),
         keyboardType: keyboardType,
         validator: validator,
+        onChanged: onChanged,
       ),
     );
   }
@@ -779,10 +855,17 @@ class _CustomQuantityFieldState extends State<CustomQuantityField> {
   int _quantity = 1;
   bool _isEditing = false;
 
+  // Función para parsear enteros con comas
+  int _parseIntWithCommas(String value) {
+    // Remover todas las comas y luego parsear
+    String cleanedValue = value.replaceAll(',', '');
+    return int.tryParse(cleanedValue) ?? 1;
+  }
+
   @override
   void initState() {
     super.initState();
-    _quantity = int.tryParse(widget.controller.text) ?? 1;
+    _quantity = _parseIntWithCommas(widget.controller.text);
   }
 
   void _increment() {
@@ -805,7 +888,7 @@ class _CustomQuantityFieldState extends State<CustomQuantityField> {
 
   void _refresh() {
     setState(() {
-      _quantity = int.tryParse(widget.controller.text) ?? 1;
+      _quantity = _parseIntWithCommas(widget.controller.text);
       widget.controller.text = _quantity.toString();
       widget.onQuantityChanged();
     });
@@ -847,7 +930,7 @@ class _CustomQuantityFieldState extends State<CustomQuantityField> {
                       onChanged: (value) {
                         if (!_isEditing) {
                           setState(() {
-                            _quantity = int.tryParse(value) ?? 1;
+                            _quantity = _parseIntWithCommas(value);
                             if (_quantity < 1) _quantity = 1;
                             widget.onQuantityChanged();
                           });
