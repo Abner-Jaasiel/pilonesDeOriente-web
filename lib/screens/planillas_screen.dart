@@ -37,6 +37,7 @@ class GridEntry {
   String semillaSembrada;
   String tipo;
   double total;
+  double precio;
   DateTime fecha;
 
   GridEntry({
@@ -45,8 +46,14 @@ class GridEntry {
     required this.semillaSembrada,
     required this.tipo,
     required this.total,
+    required this.precio,
     required this.fecha,
   });
+
+  // Calcula el total ganado por el empleado
+  double get totalGanado {
+    return (total / 1000) * precio;
+  }
 
   factory GridEntry.fromMap(Map<dynamic, dynamic> map, String key) {
     return GridEntry(
@@ -55,6 +62,7 @@ class GridEntry {
       semillaSembrada: map['semillaSembrada'] ?? '',
       tipo: map['tipo'] ?? '',
       total: (map['total'] ?? 0.0).toDouble(),
+      precio: (map['precio'] ?? 0.0).toDouble(),
       fecha: DateTime.parse(map['fecha']),
     );
   }
@@ -65,6 +73,7 @@ class GridEntry {
       'semillaSembrada': semillaSembrada,
       'tipo': tipo,
       'total': total,
+      'precio': precio,
       'fecha': DateFormat('yyyy-MM-dd').format(fecha),
     };
   }
@@ -78,6 +87,7 @@ class _PlanillasScreenState extends State<PlanillasScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nombreController = TextEditingController();
   final _totalController = TextEditingController();
+  final _precioController = TextEditingController();
 
   List<Product> _products = [];
   String? _selectedProductForAdd;
@@ -185,8 +195,9 @@ class _PlanillasScreenState extends State<PlanillasScreen> {
       final newEntry = GridEntry(
         nombre: _nombreController.text,
         semillaSembrada: _selectedProductForAdd ?? '',
-        tipo: _selectedTypeForAdd ?? '',
+        tipo: '', // Ya no se usa el tipo
         total: double.tryParse(_totalController.text) ?? 0.0,
+        precio: double.tryParse(_precioController.text) ?? 0.0,
         fecha: _fechaFiltro ?? DateTime.now(),
       );
       await _saveEntry(newEntry);
@@ -209,10 +220,10 @@ class _PlanillasScreenState extends State<PlanillasScreen> {
   void _clearForm() {
     _nombreController.clear();
     _totalController.clear();
+    _precioController.clear();
     setState(() {
       _fechaFiltro = null;
       _selectedProductForAdd = null;
-      _selectedTypeForAdd = null;
     });
   }
 
@@ -230,13 +241,13 @@ class _PlanillasScreenState extends State<PlanillasScreen> {
       pw.Page(
         build: (pw.Context context) {
           return pw.Table.fromTextArray(
-            headers: ['Nombre', 'Semilla', 'Tipo', 'Total', 'Fecha'],
+            headers: ['Nombre', 'Seleccione', 'Total', 'Total Ganado', 'Fecha'],
             data: filteredEntries
                 .map((e) => [
                       e.nombre,
                       e.semillaSembrada,
-                      e.tipo,
                       e.total.toStringAsFixed(2),
+                      e.totalGanado.toStringAsFixed(2),
                       DateFormat('dd/MM/yyyy').format(e.fecha),
                     ])
                 .toList(),
@@ -347,6 +358,33 @@ class _PlanillasScreenState extends State<PlanillasScreen> {
               const SizedBox(height: 16),
               Container(
                 constraints: const BoxConstraints(maxWidth: 300),
+                child: DropdownButtonFormField<String>(
+                  value: _selectedProductForAdd,
+                  decoration: const InputDecoration(
+                    labelText: 'Seleccione',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem<String>(value: 'Día', child: Text('Día')),
+                    DropdownMenuItem<String>(
+                        value: 'Tarea', child: Text('Tarea')),
+                    DropdownMenuItem<String>(
+                        value: 'Viáticos', child: Text('Viáticos')),
+                    DropdownMenuItem<String>(
+                        value: 'Semanal', child: Text('Semanal')),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedProductForAdd = value;
+                      _selectedTypeForAdd = null;
+                    });
+                  },
+                  validator: (value) => value == null ? 'Requerido' : null,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                constraints: const BoxConstraints(maxWidth: 300),
                 child: TextFormField(
                   controller: _nombreController,
                   decoration: const InputDecoration(
@@ -359,61 +397,23 @@ class _PlanillasScreenState extends State<PlanillasScreen> {
               const SizedBox(height: 16),
               Container(
                 constraints: const BoxConstraints(maxWidth: 300),
-                child: DropdownButtonFormField<String>(
-                  value: _selectedProductForAdd,
+                child: TextFormField(
+                  controller: _totalController,
                   decoration: const InputDecoration(
-                    labelText: 'Semilla Sembrada',
+                    labelText: 'Total de semillas sembradas',
                     border: OutlineInputBorder(),
                   ),
-                  items: _products
-                      .map((product) => DropdownMenuItem<String>(
-                            value: product.name,
-                            child: Text(product.name),
-                          ))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedProductForAdd = value;
-                      _selectedTypeForAdd = null;
-                    });
-                  },
-                  validator: (value) => value == null ? 'Requerido' : null,
+                  keyboardType: TextInputType.number,
+                  validator: (value) => value!.isEmpty ? 'Requerido' : null,
                 ),
               ),
-              if (_selectedProductForAdd != null) ...[
-                const SizedBox(height: 16),
-                Container(
-                  constraints: const BoxConstraints(maxWidth: 300),
-                  child: DropdownButtonFormField<String>(
-                    value: _selectedTypeForAdd,
-                    decoration: const InputDecoration(
-                      labelText: 'Tipo',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: _products
-                        .firstWhere((p) => p.name == _selectedProductForAdd)
-                        .types
-                        .map((type) => DropdownMenuItem<String>(
-                              value: type,
-                              child: Text(type),
-                            ))
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedTypeForAdd = value;
-                      });
-                    },
-                    validator: (value) => value == null ? 'Requerido' : null,
-                  ),
-                ),
-              ],
               const SizedBox(height: 16),
               Container(
                 constraints: const BoxConstraints(maxWidth: 300),
                 child: TextFormField(
-                  controller: _totalController,
+                  controller: _precioController,
                   decoration: const InputDecoration(
-                    labelText: 'Total',
+                    labelText: 'Precio por 1000 semillas (L.)',
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
@@ -508,6 +508,16 @@ class _PlanillasScreenState extends State<PlanillasScreen> {
                     padding: const EdgeInsets.all(8),
                     alignment: Alignment.center,
                     child: const Text('Total'),
+                  ),
+                ),
+                GridColumn(
+                  columnName: 'precio',
+                  minimumWidth: 120,
+                  maximumWidth: 180,
+                  label: Container(
+                    padding: const EdgeInsets.all(8),
+                    alignment: Alignment.center,
+                    child: const Text('Total Ganado'),
                   ),
                 ),
                 GridColumn(
@@ -609,7 +619,6 @@ class _PlanillasScreenState extends State<PlanillasScreen> {
 
   void _showEditDialog(GridEntry entry) {
     String? selectedProduct = entry.semillaSembrada;
-    String? selectedType = entry.tipo;
 
     showDialog(
       context: context,
@@ -624,6 +633,30 @@ class _PlanillasScreenState extends State<PlanillasScreen> {
                   children: [
                     Container(
                       constraints: const BoxConstraints(maxWidth: 300),
+                      child: DropdownButtonFormField<String>(
+                        value: selectedProduct,
+                        decoration:
+                            const InputDecoration(labelText: 'Seleccione'),
+                        items: const [
+                          DropdownMenuItem<String>(
+                              value: 'Día', child: Text('Día')),
+                          DropdownMenuItem<String>(
+                              value: 'Tarea', child: Text('Tarea')),
+                          DropdownMenuItem<String>(
+                              value: 'Viáticos', child: Text('Viáticos')),
+                          DropdownMenuItem<String>(
+                              value: 'Semanal', child: Text('Semanal')),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            selectedProduct = value;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      constraints: const BoxConstraints(maxWidth: 300),
                       child: TextFormField(
                         initialValue: entry.nombre,
                         decoration: const InputDecoration(labelText: 'Nombre'),
@@ -632,61 +665,24 @@ class _PlanillasScreenState extends State<PlanillasScreen> {
                     ),
                     Container(
                       constraints: const BoxConstraints(maxWidth: 300),
-                      child: DropdownButtonFormField<String>(
-                        value: _products.any((p) => p.name == selectedProduct)
-                            ? selectedProduct
-                            : null,
-                        decoration: const InputDecoration(
-                            labelText: 'Semilla Sembrada'),
-                        items: _products
-                            .map((product) => DropdownMenuItem<String>(
-                                  value: product.name,
-                                  child: Text(product.name),
-                                ))
-                            .toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            selectedProduct = value;
-                            selectedType = null;
-                          });
-                        },
-                      ),
-                    ),
-                    if (selectedProduct != null &&
-                        _products.any((p) => p.name == selectedProduct))
-                      Container(
-                        constraints: const BoxConstraints(maxWidth: 300),
-                        child: DropdownButtonFormField<String>(
-                          value: _products
-                                  .firstWhere((p) => p.name == selectedProduct)
-                                  .types
-                                  .contains(selectedType)
-                              ? selectedType
-                              : null,
-                          decoration: const InputDecoration(labelText: 'Tipo'),
-                          items: _products
-                              .firstWhere((p) => p.name == selectedProduct)
-                              .types
-                              .map((type) => DropdownMenuItem<String>(
-                                    value: type,
-                                    child: Text(type),
-                                  ))
-                              .toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              selectedType = value;
-                            });
-                          },
-                        ),
-                      ),
-                    Container(
-                      constraints: const BoxConstraints(maxWidth: 300),
                       child: TextFormField(
                         initialValue: entry.total.toStringAsFixed(2),
                         decoration: const InputDecoration(labelText: 'Total'),
                         keyboardType: TextInputType.number,
                         onChanged: (value) =>
                             entry.total = double.tryParse(value) ?? 0.0,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      constraints: const BoxConstraints(maxWidth: 300),
+                      child: TextFormField(
+                        initialValue: entry.precio.toStringAsFixed(2),
+                        decoration: const InputDecoration(
+                            labelText: 'Precio por 1000 semillas (L.)'),
+                        keyboardType: TextInputType.number,
+                        onChanged: (value) =>
+                            entry.precio = double.tryParse(value) ?? 0.0,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -727,7 +723,7 @@ class _PlanillasScreenState extends State<PlanillasScreen> {
                 TextButton(
                   onPressed: () async {
                     entry.semillaSembrada = selectedProduct ?? '';
-                    entry.tipo = selectedType ?? '';
+                    entry.tipo = ''; // Ya no se usa el tipo
                     await _saveEntry(entry);
                     Navigator.pop(context);
                   },
@@ -768,6 +764,7 @@ class GridEntryDataSource extends DataGridSource {
                 columnName: 'semilla', value: e.semillaSembrada),
             DataGridCell<String>(columnName: 'tipo', value: e.tipo),
             DataGridCell<double>(columnName: 'total', value: e.total),
+            DataGridCell<double>(columnName: 'precio', value: e.totalGanado),
             DataGridCell<String>(
                 columnName: 'fecha',
                 value: DateFormat('dd/MM/yyyy').format(e.fecha)),
